@@ -18,6 +18,17 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/CameraBundle/'
+            - '../src/Kernel.php'
+
+    # src/CameraBundle lives under its own namespace (Survos\CameraBundle\) -- see
+    # src/CameraBundle/SurvosCameraBundle.php for why -- so it needs its own resource mapping.
+    Survos\CameraBundle\:
+        resource: '../src/CameraBundle/'
+
+    # the one seam between camera-bundle and this app: it never knows about App\Entity\Item.
+    Survos\CameraBundle\Contract\CaptureHandlerInterface: '@App\Service\ItemCaptureHandler'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

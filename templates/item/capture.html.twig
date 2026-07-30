@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block navbar_title %}Capture item{% endblock %}
+
+{% block body %}
+    <div class="block" {{ stimulus_controller('capture') }}>
+        <div class="capture-video-wrap">
+            <video {{ stimulus_target('capture', 'video') }} autoplay playsinline muted></video>
+        </div>
+
+        <div class="grid grid-cols-2" style="margin-top: 12px;">
+            <button type="button" class="button button-fill button-large" data-action="capture#snap">
+                📷 Snap photo
+            </button>
+            <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio">
+                🎙️ Record a note
+            </button>
+        </div>
+        <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
+
+        <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
+
+        <button type="button" {{ stimulus_target('capture', 'submitBtn') }} class="button button-fill button-large color-green" style="margin-top: 12px;" disabled data-action="capture#submit">
+            Save item
+        </button>
+
+        <p class="text-align-center" {{ stimulus_target('capture', 'pendingCount') }}></p>
+        <p class="text-align-center text-color-red" {{ stimulus_target('capture', 'statusMsg') }}></p>
+    </div>
+{% endblock %}

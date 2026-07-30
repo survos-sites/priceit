@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <title>{% block title %}PriceIt{% endblock %}</title>
+        {{ pwa() }}
+        {% block stylesheets %}
+        {% endblock %}
+
+        {% block javascripts %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
+        {% endblock %}
+    </head>
+    <body data-turbo="false">
+        <div id="app" class="framework7-root safe-areas" {{ stimulus_controller('f7') }}>
+            <div class="view view-main view-init safe-areas" data-url="/">
+                <div class="page page-current">
+                    <div class="navbar">
+                        <div class="navbar-bg"></div>
+                        <div class="navbar-inner">
+                            <div class="title">{% block navbar_title %}PriceIt{% endblock %}</div>
+                        </div>
+                    </div>
+
+                    <div class="page-content">
+                        {% block body %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

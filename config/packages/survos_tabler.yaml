@@ -1,0 +1,9 @@
+survos_tabler:
+    routes:
+        home: admin_item_index
+    app:
+        code: priceit
+        title: 'PriceIt'
+        homepage_route: admin_item_index
+    debug:
+        menu_slots: false

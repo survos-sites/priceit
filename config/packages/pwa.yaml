@@ -1,0 +1,60 @@
+pwa:
+    image_processor: 'gd'
+
+    manifest:
+        enabled: true
+        public_url: '/pwa/site.webmanifest'
+        name: 'PriceIt'
+        short_name: 'PriceIt'
+        description: 'Snap photos, speak a note, get an AI price suggestion for garage-sale items.'
+        theme_color: '#E67E22'
+        background_color: '#111318'
+        display: 'standalone'
+        scope: '/'
+        start_url: '/'
+        categories:
+            - 'utilities'
+        icons:
+            - src: 'images/icon.png'
+              sizes: [192]
+            - src: 'images/icon.png'
+              sizes: [512]
+            - src: 'images/icon.png'
+              sizes: [512]
+              purpose: 'maskable'
+
+    # Nested default/dark structure -- the flat favicons.src/background_color keys were
+    # deprecated in 1.3.0, this is the current shape.
+    favicons:
+        enabled: true
+        default:
+            src: 'images/icon.png'
+
+    serviceworker:
+        enabled: true
+        skip_waiting: true
+        workbox:
+            enabled: true
+            asset_cache:
+                enabled: true
+            image_cache:
+                enabled: true
+            font_cache:
+                enabled: true
+            # Caches the capture page's own HTML so it opens with zero connectivity, not just
+            # its static assets. StaleWhileRevalidate over NetworkFirst: serve the cached shell
+            # instantly every time, refresh it in the background when a network is present --
+            # no network_timeout delay on every single load just to *maybe* get a fresher page.
+            resource_caches:
+                - match_callback: 'navigate'
+                  strategy: 'StaleWhileRevalidate'
+                  cache_name: 'pages'
+            # Last-resort fallback for a first-ever visit with zero warm cache.
+            offline_fallback:
+                page:
+                    path: 'item_capture'
+            # Deliberately NOT using workbox's background_sync here: camera-bundle's own Dexie
+            # CaptureQueue already owns capture upload retry (cross-browser, since Background
+            # Sync itself is Chromium-only) and already POSTs to this same endpoint. Layering
+            # Workbox's background_sync on top would double-queue and double-retry the same
+            # request at two different levels.
