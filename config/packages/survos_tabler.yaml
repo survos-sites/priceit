@@ -7,3 +7,5 @@ survos_tabler:
         homepage_route: admin_item_index
     debug:
         menu_slots: false
+    favicon:
+        text: PI
