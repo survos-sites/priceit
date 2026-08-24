@@ -15,7 +15,8 @@ use App\Entity\MediaKind;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Vich\UploaderBundle\Storage\StorageInterface;
+use League\Flysystem\FilesystemOperator;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Looks at an item's photos and proposes a title, a description and a price.
@@ -76,7 +77,8 @@ final class PricingSuggestionService
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly StorageInterface $storage,
+        #[Target('media.storage')]
+        private readonly FilesystemOperator $media,
         private readonly LoggerInterface $logger,
         #[Autowire('%env(ANTHROPIC_API_KEY)%')]
         private readonly string $apiKey,
@@ -176,20 +178,29 @@ final class PricingSuggestionService
                 continue;
             }
 
-            $path = $this->storage->resolvePath($media, 'file');
-            if ($path === null || !is_readable($path)) {
-                continue;
-            }
-
             $mediaType = $this->mediaTypeFor($media->getMimeType() ?? '');
             if ($mediaType === null) {
                 $this->logger->warning('priceit: unsupported image type', ['mime' => $media->getMimeType()]);
                 continue;
             }
 
+            // Read through flysystem rather than the filesystem: in production
+            // the photo lives in object storage and has no local path at all.
+            $filename = $media->getFilename();
+            if ($filename === null) {
+                continue;
+            }
+
+            try {
+                $bytes = $this->media->read($filename);
+            } catch (\Throwable $e) {
+                $this->logger->warning('priceit: could not read photo', ['file' => $filename, 'error' => $e->getMessage()]);
+                continue;
+            }
+
             $blocks[] = ImageBlockParam::with(
                 source: Base64ImageSource::with(
-                    data: base64_encode((string) file_get_contents($path)),
+                    data: base64_encode($bytes),
                     mediaType: $mediaType,
                 ),
             );

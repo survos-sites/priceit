@@ -55,6 +55,19 @@
     "knplabs/knp-menu-bundle": {
         "version": "v3.7.0"
     },
+    "league/flysystem-bundle": {
+        "version": "3.7",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "1.0",
+            "ref": "913dc3d7a5a1af0d2b044c5ac3a16e2f851d7380"
+        },
+        "files": [
+            "config/packages/flysystem.yaml",
+            "var/storage/.gitignore"
+        ]
+    },
     "php-http/discovery": {
         "version": "1.20",
         "recipe": {
@@ -87,6 +100,9 @@
     },
     "survos/atlas-bundle": {
         "version": "2.10.19"
+    },
+    "survos/deployment-bundle": {
+        "version": "2.24.30"
     },
     "survos/doc-bundle": {
         "version": "2.19.2"

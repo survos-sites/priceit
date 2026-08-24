@@ -1,8 +1,14 @@
 vich_uploader:
     db_driver: orm
+    # Storage is a top-level choice, not per-mapping: upload_destination then
+    # names a flysystem service rather than a directory.
+    storage: flysystem
+    use_flysystem_to_resolve_uri: false
 
     mappings:
         item_media:
-            uri_prefix: /uploads/media
-            upload_destination: '%kernel.project_dir%/public/uploads/media'
+            # A flysystem service id, not a path: in prod that is the Hetzner
+            # bucket, in dev a directory under public/.
+            uri_prefix: '%env(MEDIA_URI_PREFIX)%'
+            upload_destination: media.storage
             namer: Vich\UploaderBundle\Naming\SmartUniqueNamer

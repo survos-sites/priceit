@@ -61,7 +61,8 @@ class ItemFlow
         info: 'Suggest',
         description: 'Read the photos, propose a title, a description and a garage-sale price.',
         // Async because the phone is waiting on the upload response, often on a
-        // bad connection, while a vision call takes seconds.
+        // bad connection, while a vision call takes seconds. This is what creates
+        // the item.suggest transport.
         async: true,
     )]
     public const TRANSITION_SUGGEST = 'suggest';

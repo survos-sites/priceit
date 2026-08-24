@@ -30,4 +30,6 @@ return [
     Survos\StateBundle\SurvosStateBundle::class => ['all' => true],
     Survos\TuiExtrasBundle\SurvosTuiExtrasBundle::class => ['all' => true],
     Survos\SupervisorBundle\SurvosSupervisorBundle::class => ['all' => true],
+    League\FlysystemBundle\FlysystemBundle::class => ['all' => true],
+    Survos\DeploymentBundle\SurvosDeploymentBundle::class => ['dev' => true, 'test' => true],
 ];
