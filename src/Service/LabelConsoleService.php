@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\ItemStatus;
+use App\Workflow\ItemFlow;
 use App\Repository\ItemRepository;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -67,12 +67,12 @@ final class LabelConsoleService
     public function suggest(
         SymfonyStyle $io,
         #[Argument('item id; omit with --pending to do them all')] ?int $id = null,
-        #[Option('every item still at "captured"')] bool $pending = false,
+        #[Option('every item still at "new", plus anything that failed')] bool $pending = false,
     ): int {
         if ($pending) {
             // For items captured before the async dispatch existed, or whose
             // message died in the failure transport.
-            $items = $this->items->findBy(['status' => ItemStatus::Captured], ['id' => 'ASC']);
+            $items = $this->items->findBy(['marking' => [ItemFlow::PLACE_NEW, ItemFlow::PLACE_FAILED]], ['id' => 'ASC']);
             if ($items === []) {
                 $io->success('Nothing pending.');
 

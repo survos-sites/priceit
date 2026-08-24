@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "29752865557640805b24993e932567b0",
+    "content-hash": "d4a7a17c929dcef4b1653a80df16a8c5",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -1405,6 +1405,61 @@
                 "source": "https://github.com/DASPRiD/Enum/tree/1.0.7"
             },
             "time": "2025-09-16T12:23:56+00:00"
+        },
+        {
+            "name": "davidbadura/markdown-builder",
+            "version": "1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/DavidBadura/markdown-builder.git",
+                "reference": "cdc1a29eb14f3202efb0e59ac80c2acb6f883af0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/DavidBadura/markdown-builder/zipball/cdc1a29eb14f3202efb0e59ac80c2acb6f883af0",
+                "reference": "cdc1a29eb14f3202efb0e59ac80c2acb6f883af0",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "infection/infection": "^0.22.1",
+                "patchlevel/coding-standard": "^1.0.0",
+                "phpstan/phpstan": "^0.12.85",
+                "phpunit/phpunit": "^9.5.4",
+                "symfony/var-dumper": "^5.2.3",
+                "vimeo/psalm": "^4.7.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "DavidBadura\\MarkdownBuilder\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "DavidBadura",
+                    "email": "d.badura@gmx.de"
+                }
+            ],
+            "description": "Markdown Builder",
+            "keywords": [
+                "builder",
+                "markdown",
+                "render",
+                "writer"
+            ],
+            "support": {
+                "issues": "https://github.com/DavidBadura/markdown-builder/issues",
+                "source": "https://github.com/DavidBadura/markdown-builder/tree/1.1.1"
+            },
+            "time": "2021-10-23T09:22:02+00:00"
         },
         {
             "name": "doctrine/collections",
@@ -3131,6 +3186,53 @@
             "time": "2026-01-02T08:56:05+00:00"
         },
         {
+            "name": "nadar/php-composer-reader",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nadar/php-composer-reader.git",
+                "reference": "1b87eb072d76ad850c6fde32a33ee8061f31f66e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nadar/php-composer-reader/zipball/1b87eb072d76ad850c6fde32a33ee8061f31f66e",
+                "reference": "1b87eb072d76ad850c6fde32a33ee8061f31f66e",
+                "shasum": ""
+            },
+            "require": {
+                "composer/semver": "^3",
+                "php": ">=8"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.15",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^9",
+                "rector/rector": "^0.15.23"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nadar\\PhpComposerReader\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Basil Suter",
+                    "email": "git@nadar.io"
+                }
+            ],
+            "description": "Read and manipulate composer.json",
+            "support": {
+                "issues": "https://github.com/nadar/php-composer-reader/issues",
+                "source": "https://github.com/nadar/php-composer-reader/tree/2.1.0"
+            },
+            "time": "2025-01-02T08:27:49+00:00"
+        },
+        {
             "name": "nyholm/psr7",
             "version": "1.8.2",
             "source": {
@@ -4209,6 +4311,80 @@
             "time": "2026-06-17T12:10:29+00:00"
         },
         {
+            "name": "survos/doc-bundle",
+            "version": "2.19.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/doc-bundle.git",
+                "reference": "d5102122cb4713573093086bd94af2af1e69e05e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/doc-bundle/zipball/d5102122cb4713573093086bd94af2af1e69e05e",
+                "reference": "d5102122cb4713573093086bd94af2af1e69e05e",
+                "shasum": ""
+            },
+            "require": {
+                "davidbadura/markdown-builder": "^1.1",
+                "nadar/php-composer-reader": "^2.0",
+                "php": "^8.5",
+                "survos/kit-bundle": "^2.5",
+                "symfony/config": "^8.1",
+                "symfony/console": "^8.1",
+                "symfony/dependency-injection": "^8.1",
+                "symfony/filesystem": "^8.1",
+                "symfony/finder": "^8.1",
+                "symfony/http-kernel": "^8.1",
+                "symfony/options-resolver": "^8.1",
+                "twig/twig": "^3.4|^4.0"
+            },
+            "require-dev": {
+                "doctrine/orm": "^3.0",
+                "jawira/doctrine-diagram-bundle": "^2.0",
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.0",
+                "symfony/framework-bundle": "^8.1",
+                "symfony/panther": "^2.2",
+                "symfony/routing": "^8.1"
+            },
+            "suggest": {
+                "behat/behat": "For running the Behat feature tests (no Symfony 8 compatible release yet)",
+                "friends-of-behat/symfony-extension": "Symfony integration for Behat (requires behat/behat)",
+                "survos/state-bundle": "Richer doc:workflows diagrams that honor Survos place/transition metadata",
+                "symfony/process": "Lets doc:workflows render .svg diagrams via graphviz \"dot\"",
+                "symfony/workflow": "Required by the doc:workflows command to document registered workflows"
+            },
+            "type": "symfony-bundle",
+            "autoload": {
+                "psr-4": {
+                    "Survos\\DocBundle\\": "src/",
+                    "Survos\\DocBundle\\Tests\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tac Tacelosky",
+                    "email": "tacman@gmail.com"
+                }
+            ],
+            "description": "Build Sphinx documentation for a Symfony project, using Twig templates",
+            "support": {
+                "issues": "https://github.com/survos/doc-bundle/issues",
+                "source": "https://github.com/survos/doc-bundle/tree/2.19.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-11T10:56:00+00:00"
+        },
+        {
             "name": "survos/field-bundle",
             "version": "2.15.18",
             "source": {
@@ -4410,6 +4586,93 @@
                 }
             ],
             "time": "2026-07-23T11:04:17+00:00"
+        },
+        {
+            "name": "survos/state-bundle",
+            "version": "2.24.29",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/state-bundle.git",
+                "reference": "45b9e4971b896d5cf6480f5409778482ac92d53c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/state-bundle/zipball/45b9e4971b896d5cf6480f5409778482ac92d53c",
+                "reference": "45b9e4971b896d5cf6480f5409778482ac92d53c",
+                "shasum": ""
+            },
+            "require": {
+                "doctrine/orm": "^2.12 || ^3.3",
+                "php": "^8.5",
+                "survos/kit-bundle": "^2.5",
+                "symfony/console": "^8.1",
+                "symfony/http-kernel": "^8.1",
+                "symfony/messenger": "^8.1",
+                "symfony/process": "^8.1",
+                "symfony/string": "^8.1",
+                "symfony/workflow": "^8.1",
+                "symfony/yaml": "^8.1"
+            },
+            "require-dev": {
+                "nette/php-generator": "^4.1",
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.0",
+                "psr/log": "^3.0",
+                "roave/better-reflection": "^6.0",
+                "survos/tabler-bundle": "^2.5",
+                "symfony/browser-kit": "^8.1",
+                "symfony/config": "^8.1",
+                "symfony/dependency-injection": "^8.1",
+                "symfony/form": "^8.1",
+                "symfony/framework-bundle": "^8.1",
+                "symfony/maker-bundle": "^1.5",
+                "symfony/twig-bundle": "^8.1",
+                "symfony/ux-chartjs": "^3",
+                "symfony/var-dumper": "^8.1",
+                "zenstruck/class-metadata": "^1.1",
+                "zenstruck/messenger-monitor-bundle": "^v0.6.0"
+            },
+            "type": "symfony-bundle",
+            "extra": {
+                "symfony": {
+                    "allow-contrib": true
+                },
+                "branch-alias": {
+                    "dev-master": "2.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Survos\\StateBundle\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tac Tacelosky",
+                    "email": "tacman@gmail.com"
+                }
+            ],
+            "description": "Add some tools managing state machines using the Symfony Workflow Component",
+            "keywords": [
+                "symfony",
+                "symfony-ux",
+                "workflow"
+            ],
+            "support": {
+                "issues": "https://github.com/survos/state-bundle/issues",
+                "source": "https://github.com/survos/state-bundle/tree/2.24.29"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-24T13:02:01+00:00"
         },
         {
             "name": "survos/tabler-bundle",
@@ -10345,6 +10608,96 @@
             ],
             "support": {
                 "source": "https://github.com/symfony/web-link/tree/v8.1.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-05-29T05:06:50+00:00"
+        },
+        {
+            "name": "symfony/workflow",
+            "version": "v8.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/workflow.git",
+                "reference": "8a4690c56fbc8766d4b49f02e60e8fa0ed360211"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/workflow/zipball/8a4690c56fbc8766d4b49f02e60e8fa0ed360211",
+                "reference": "8a4690c56fbc8766d4b49f02e60e8fa0ed360211",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.4.1"
+            },
+            "require-dev": {
+                "psr/log": "^1|^2|^3",
+                "symfony/config": "^7.4|^8.0",
+                "symfony/console": "^7.4|^8.0",
+                "symfony/dependency-injection": "^7.4|^8.0",
+                "symfony/error-handler": "^7.4|^8.0",
+                "symfony/event-dispatcher": "^7.4|^8.0",
+                "symfony/expression-language": "^7.4|^8.0",
+                "symfony/http-kernel": "^7.4|^8.0",
+                "symfony/security-core": "^7.4|^8.0",
+                "symfony/stopwatch": "^7.4|^8.0",
+                "symfony/validator": "^7.4|^8.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Component\\Workflow\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Grégoire Pineau",
+                    "email": "lyrixx@lyrixx.info"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Provides tools for managing a workflow or finite state machine",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "petrinet",
+                "place",
+                "state",
+                "statemachine",
+                "transition",
+                "workflow"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/workflow/tree/v8.1.0"
             },
             "funding": [
                 {

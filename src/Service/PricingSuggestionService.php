@@ -11,7 +11,6 @@ use Anthropic\Messages\JSONOutputFormat;
 use Anthropic\Messages\OutputConfig;
 use Anthropic\Messages\TextBlockParam;
 use App\Entity\Item;
-use App\Entity\ItemStatus;
 use App\Entity\MediaKind;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -150,7 +149,8 @@ final class PricingSuggestionService
             $price = min(500.0, max(0.5, (float) $data['priceUsd']));
             $item->setPrice(number_format($price, 2, '.', ''));
         }
-        $item->setStatus(ItemStatus::Suggested);
+        // The marking is the workflow's business, not this service's — it is
+        // called from inside the `suggest` transition, which moves the item.
         $this->em->flush();
 
         return [

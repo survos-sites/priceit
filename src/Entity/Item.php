@@ -9,6 +9,8 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use App\Repository\ItemRepository;
+use App\Workflow\ItemFlow;
+use Survos\StateBundle\Traits\MarkingTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -28,6 +30,8 @@ use Symfony\Component\Serializer\Attribute\Groups;
 )]
 class Item
 {
+    use MarkingTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -42,9 +46,6 @@ class Item
     #[Groups(['item:read'])]
     private string $clientId;
 
-    #[ORM\Column(enumType: ItemStatus::class)]
-    #[Groups(['item:read', 'item:write'])]
-    private ItemStatus $status = ItemStatus::Captured;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['item:read', 'item:write'])]
@@ -74,6 +75,7 @@ class Item
     public function __construct(string $clientId)
     {
         $this->clientId = $clientId;
+        $this->marking = ItemFlow::PLACE_NEW;
         $this->createdAt = new \DateTimeImmutable();
         $this->media = new ArrayCollection();
     }
@@ -88,17 +90,6 @@ class Item
         return $this->clientId;
     }
 
-    public function getStatus(): ItemStatus
-    {
-        return $this->status;
-    }
-
-    public function setStatus(ItemStatus $status): static
-    {
-        $this->status = $status;
-
-        return $this;
-    }
 
     public function getTitle(): ?string
     {

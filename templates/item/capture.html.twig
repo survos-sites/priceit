@@ -13,10 +13,14 @@
                 📷 Snap photo
             </button>
             <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio">
-                🎙️ Record a note
+                🎙️ Say something about it
             </button>
         </div>
         <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
+
+        {# Fills in live while they talk — seeing the words is what tells someone
+           it heard them, and what stops them repeating the whole sentence. #}
+        <p {{ stimulus_target('capture', 'transcript') }} class="capture-transcript"></p>
 
         <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
 

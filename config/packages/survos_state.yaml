@@ -1,0 +1,12 @@
+survos_state:
+    base_layout: admin/base.html.twig
+    enable_dynamic_routing: true
+    workflow_paths:
+        - '%kernel.project_dir%/src/Workflow'
+
+    # queue_driver is a hard requirement, not a hint: the bundle picks its
+    # dynamic-queue strategy from this value alone and deliberately does not
+    # infer it from the DSN, which is an unresolved %env()% at compile time.
+    # priceit is a single-machine demo app on SQLite — Doctrine, not a broker.
+    queue_driver: doctrine
+    async_transport_dsn: '%env(MESSENGER_TRANSPORT_DSN)%'

@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { Camera } from 'camera-bundle/camera';
 import { AudioRecorder } from 'camera-bundle/audio-recorder';
+import { Speech } from 'camera-bundle/speech';
 import { CaptureQueue } from 'camera-bundle/capture-queue';
 
 /**
@@ -10,12 +11,14 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'transcript'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
     this.camera = new Camera();
     this.audio = new AudioRecorder();
+    this.speech = new Speech();
+    this.transcript = '';
     this.photos = [];
     this.audioBlob = null;
 
@@ -35,6 +38,7 @@ export default class extends Controller {
   disconnect() {
     this.camera.close();
     this.audio.cancel();
+    if (this.speech.isListening) this.speech.stop();
     this.queue.stop();
   }
 
@@ -55,10 +59,17 @@ export default class extends Controller {
   }
 
   async toggleAudio() {
+    // Dictation where the browser supports it: the note is only ever wanted as
+    // text, so there is no reason to carry an audio file around. Firefox and
+    // anything offline fall through to recording a blob as before.
+    if (Speech.isSupported()) {
+      return this._toggleDictation();
+    }
+
     if (this.audio.isRecording) {
       this.audioBlob = await this.audio.stop();
       this.audioBtnTarget.textContent = '🎙️ Re-record note';
-      this.audioStatusTarget.textContent = 'Note recorded';
+      this.audioStatusTarget.textContent = 'Note recorded (audio — this browser cannot transcribe)';
     } else {
       try {
         await this.audio.start();
@@ -68,6 +79,47 @@ export default class extends Controller {
         this._setStatus(`Mic error: ${err.message}`);
       }
     }
+  }
+
+  _toggleDictation() {
+    if (this.speech.isListening) {
+      this.transcript = this.speech.stop();
+      this.audioBtnTarget.textContent = this.transcript ? '🎙️ Say more' : '🎙️ Say something about it';
+      this.audioStatusTarget.textContent = this.transcript ? '' : 'Nothing heard';
+      return;
+    }
+
+    this.speech.onUpdate = (text, interim) => {
+      this.transcript = text;
+      if (this.hasTranscriptTarget) {
+        this.transcriptTarget.textContent = text;
+        // Interim words are still being revised; showing that keeps people from
+        // repeating themselves when a word lands wrong for a moment.
+        this.transcriptTarget.classList.toggle('is-interim', Boolean(interim));
+      }
+    };
+    this.speech.onError = (err) => {
+      this.audioStatusTarget.textContent =
+        err === 'not-allowed' ? 'Microphone blocked — allow it in the address bar' : `Speech error: ${err}`;
+      this.audioBtnTarget.textContent = '🎙️ Say something about it';
+    };
+
+    try {
+      this.speech.start();
+      this.audioBtnTarget.textContent = '⏹️ Stop';
+      this.audioStatusTarget.textContent = 'Listening…';
+    } catch (err) {
+      this._setStatus(err.message);
+    }
+  }
+
+  clearNote() {
+    this.speech.reset();
+    this.transcript = '';
+    this.audioBlob = null;
+    if (this.hasTranscriptTarget) this.transcriptTarget.textContent = '';
+    this.audioStatusTarget.textContent = '';
+    this.audioBtnTarget.textContent = '🎙️ Say something about it';
   }
 
   async submit() {
@@ -80,7 +132,7 @@ export default class extends Controller {
       await this.queue.enqueue({
         photos: this.photos,
         audio: this.audioBlob,
-        metadata: {},
+        metadata: this.transcript ? { transcript: this.transcript } : {},
       });
     } catch (err) {
       this._setStatus(`Could not save locally: ${err.message}`);
@@ -89,9 +141,7 @@ export default class extends Controller {
 
     this._setStatus('Queued — uploading in the background');
     this.photos = [];
-    this.audioBlob = null;
-    this.audioBtnTarget.textContent = '🎙️ Record a note';
-    this.audioStatusTarget.textContent = '';
+    this.clearNote();
     this._renderThumbs();
     this._refreshPendingCount();
   }

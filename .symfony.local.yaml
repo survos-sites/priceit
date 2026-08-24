@@ -15,5 +15,9 @@ workers:
     # Without this the suggestion message sits in the doctrine queue and items
     # stay at "captured" forever — which looks exactly like the AI being broken.
     messenger_suggest:
-        cmd: ['symfony', 'console', 'messenger:consume', 'async', '--time-limit=3600']
+        # item.suggest, not async: state-bundle gives every async transition its
+        # own dynamic transport named <workflow>.<transition>. A worker on
+        # `async` alone sits idle while the kickoff messages pile up next door —
+        # which looks exactly like the workflow never firing.
+        cmd: ['symfony', 'console', 'messenger:consume', 'item.suggest', 'async', '--time-limit=3600']
         watch: ['config', 'src']

@@ -123,6 +123,12 @@
                 "fetch": "lazy"
             }
         },
+        "@survos/state-bundle": {
+            "workflow": {
+                "enabled": true,
+                "fetch": "eager"
+            }
+        },
         "@survos/tabler-bundle": {
             "accordion": {
                 "enabled": true,

@@ -44,6 +44,7 @@ return [
     'camera-bundle/camera' => ['path' => './src/CameraBundle/assets/camera.js'],
     'camera-bundle/audio-recorder' => ['path' => './src/CameraBundle/assets/audio_recorder.js'],
     'camera-bundle/capture-queue' => ['path' => './src/CameraBundle/assets/capture_queue.js'],
+    'camera-bundle/speech' => ['path' => './src/CameraBundle/assets/speech.js'],
     '@spomky-labs/pwa/helpers' => ['path' => './vendor/spomky-labs/pwa-bundle/assets/src/helpers.js'],
     '@survos-mobile/mobile' => ['path' => './vendor/survos/fw-bundle/assets/src/controllers/mobile_controller.js'],
     'debug' => ['version' => '4.4.3'],
