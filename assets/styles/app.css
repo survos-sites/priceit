@@ -47,17 +47,24 @@
 }
 
 
-/* Live dictation. Interim words are greyed because the engine is still
-   revising them — they change under you, and that looks like a bug unless
-   the styling says "not final yet". */
-.capture-transcript {
-    margin: 8px 12px 0;
-    min-height: 1.4em;
+/* The note. One field whether it was typed or dictated. Interim dictation is
+   greyed because the engine is still revising those words — they change under
+   you, and that reads as a bug unless the styling says "not settled yet". */
+.capture-note {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 10px 12px 0;
+    padding: 8px 10px;
     font-size: 15px;
     line-height: 1.45;
+    font-family: inherit;
     color: #1c1c1e;
+    background: #fff;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    resize: vertical;
 }
-.capture-transcript.is-interim {
+.capture-note.is-interim {
     color: #6b6b70;
     font-style: italic;
 }

@@ -12,15 +12,20 @@
             <button type="button" class="button button-fill button-large" data-action="capture#snap">
                 📷 Snap photo
             </button>
-            <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio">
+            {# Hidden unless the browser can dictate AND there is a connection to
+               dictate through — Chrome sends the audio away to recognise it. #}
+            <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio" hidden>
                 🎙️ Say something about it
             </button>
         </div>
         <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
 
-        {# Fills in live while they talk — seeing the words is what tells someone
-           it heard them, and what stops them repeating the whole sentence. #}
-        <p {{ stimulus_target('capture', 'transcript') }} class="capture-transcript"></p>
+        {# One field, whether the words were typed or spoken. Dictation writes
+           here, so there is never a second place the note could be hiding. #}
+        <textarea {{ stimulus_target('capture', 'note') }}
+                  class="capture-note" rows="2"
+                  placeholder="Anything the photo can't show — size, condition, what it's worth"
+                  data-action="capture#noteChanged"></textarea>
 
         <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
 

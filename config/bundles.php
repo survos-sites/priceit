@@ -28,4 +28,6 @@ return [
     Endroid\QrCodeBundle\EndroidQrCodeBundle::class => ['all' => true],
     Survos\DocBundle\SurvosDocBundle::class => ['all' => true],
     Survos\StateBundle\SurvosStateBundle::class => ['all' => true],
+    Survos\TuiExtrasBundle\SurvosTuiExtrasBundle::class => ['all' => true],
+    Survos\SupervisorBundle\SurvosSupervisorBundle::class => ['all' => true],
 ];

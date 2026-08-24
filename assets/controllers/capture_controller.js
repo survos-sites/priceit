@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'transcript'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -19,6 +19,8 @@ export default class extends Controller {
     this.audio = new AudioRecorder();
     this.speech = new Speech();
     this.transcript = '';
+    this.notePrefix = '';
+    this._onConnectivityChange = () => this._updateSpeechAvailability();
     this.photos = [];
     this.audioBlob = null;
 
@@ -32,13 +34,26 @@ export default class extends Controller {
     this.queue.start();
     this._refreshPendingCount();
 
+    // Connectivity can change mid-sale — a phone in a garage drifts on and off
+    // wifi constantly, so this is checked continuously rather than once on load.
+    window.addEventListener('online', this._onConnectivityChange);
+    window.addEventListener('offline', this._onConnectivityChange);
+    this._updateSpeechAvailability();
+
     this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
+  }
+
+  /** Whatever is in the box, typed or dictated. */
+  _note() {
+    return this.hasNoteTarget ? this.noteTarget.value.trim() : this.transcript.trim();
   }
 
   disconnect() {
     this.camera.close();
     this.audio.cancel();
     if (this.speech.isListening) this.speech.stop();
+    window.removeEventListener('online', this._onConnectivityChange);
+    window.removeEventListener('offline', this._onConnectivityChange);
     this.queue.stop();
   }
 
@@ -59,26 +74,10 @@ export default class extends Controller {
   }
 
   async toggleAudio() {
-    // Dictation where the browser supports it: the note is only ever wanted as
-    // text, so there is no reason to carry an audio file around. Firefox and
-    // anything offline fall through to recording a blob as before.
-    if (Speech.isSupported()) {
-      return this._toggleDictation();
-    }
-
-    if (this.audio.isRecording) {
-      this.audioBlob = await this.audio.stop();
-      this.audioBtnTarget.textContent = '🎙️ Re-record note';
-      this.audioStatusTarget.textContent = 'Note recorded (audio — this browser cannot transcribe)';
-    } else {
-      try {
-        await this.audio.start();
-        this.audioBtnTarget.textContent = '⏹️ Stop recording';
-        this.audioStatusTarget.textContent = 'Recording…';
-      } catch (err) {
-        this._setStatus(`Mic error: ${err.message}`);
-      }
-    }
+    // The button only exists when dictation is usable, so there is no
+    // fallback branch here any more: no connection means no button, and the
+    // note gets typed. Recording audio nobody transcribes helped no one.
+    return this._toggleDictation();
   }
 
   _toggleDictation() {
@@ -90,12 +89,13 @@ export default class extends Controller {
     }
 
     this.speech.onUpdate = (text, interim) => {
-      this.transcript = text;
-      if (this.hasTranscriptTarget) {
-        this.transcriptTarget.textContent = text;
-        // Interim words are still being revised; showing that keeps people from
-        // repeating themselves when a word lands wrong for a moment.
-        this.transcriptTarget.classList.toggle('is-interim', Boolean(interim));
+      // Straight into the textarea: spoken and typed notes end up in the same
+      // place, so nothing has to reconcile two sources later — and a misheard
+      // word can just be corrected by hand.
+      this.transcript = this._composeNote(text);
+      if (this.hasNoteTarget) {
+        this.noteTarget.value = this.transcript;
+        this.noteTarget.classList.toggle('is-interim', Boolean(interim));
       }
     };
     this.speech.onError = (err) => {
@@ -113,13 +113,48 @@ export default class extends Controller {
     }
   }
 
+  noteChanged() {
+    // Typing wins: whatever is in the box is the note. Anything already
+    // dictated becomes the base that further speech appends to.
+    this.transcript = this.hasNoteTarget ? this.noteTarget.value : '';
+    this.speech.reset();
+    this.notePrefix = this.transcript;
+  }
+
   clearNote() {
     this.speech.reset();
     this.transcript = '';
+    this.notePrefix = '';
     this.audioBlob = null;
-    if (this.hasTranscriptTarget) this.transcriptTarget.textContent = '';
+    if (this.hasNoteTarget) {
+      this.noteTarget.value = '';
+      this.noteTarget.classList.remove('is-interim');
+    }
     this.audioStatusTarget.textContent = '';
     this.audioBtnTarget.textContent = '🎙️ Say something about it';
+  }
+
+  /** Dictated words appended to whatever was already typed. */
+  _composeNote(spoken) {
+    const typed = (this.notePrefix || '').trim();
+    return typed ? `${typed} ${spoken}`.trim() : spoken;
+  }
+
+  /**
+   * Dictation is offered only when it can actually work: the browser has to
+   * implement SpeechRecognition, and there has to be a connection, because
+   * Chrome recognises by sending the audio to a server. Offline it is hidden
+   * rather than shown-and-broken, and the textarea carries the note instead.
+   */
+  _updateSpeechAvailability() {
+    const usable = Speech.isSupported() && navigator.onLine;
+
+    this.audioBtnTarget.hidden = !usable;
+
+    if (!usable && this.speech.isListening) {
+      this.transcript = this.speech.stop();
+      this.audioStatusTarget.textContent = 'Connection lost — finish the note by typing';
+    }
   }
 
   async submit() {
@@ -132,7 +167,7 @@ export default class extends Controller {
       await this.queue.enqueue({
         photos: this.photos,
         audio: this.audioBlob,
-        metadata: this.transcript ? { transcript: this.transcript } : {},
+        metadata: this._note() ? { transcript: this._note() } : {},
       });
     } catch (err) {
       this._setStatus(`Could not save locally: ${err.message}`);

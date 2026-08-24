@@ -21,6 +21,7 @@
         "survos/doc-bundle": "^2.19",
         "survos/fw-bundle": "*",
         "survos/state-bundle": "^2.24",
+        "survos/supervisor-bundle": "^2.24",
         "survos/tabler-bundle": "^2.15",
         "symfony/asset": "8.1.*",
         "symfony/asset-mapper": "8.1.*",

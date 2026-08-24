@@ -103,8 +103,14 @@
     "survos/state-bundle": {
         "version": "2.24.29"
     },
+    "survos/supervisor-bundle": {
+        "version": "2.24.27"
+    },
     "survos/tabler-bundle": {
         "version": "2.15.17"
+    },
+    "survos/tui-extras-bundle": {
+        "version": "2.24.24"
     },
     "symfony/asset-mapper": {
         "version": "8.1",
