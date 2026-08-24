@@ -49,6 +49,9 @@
             "migrations/.gitignore"
         ]
     },
+    "endroid/qr-code-bundle": {
+        "version": "7.0.1"
+    },
     "knplabs/knp-menu-bundle": {
         "version": "v3.7.0"
     },

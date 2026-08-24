@@ -1,0 +1,12 @@
+# .symfony.local.yaml
+http:
+    port: 8013  # hard-forces the port (not preferred_port, which falls back to random).
+                #
+                # 8010-8024 is the band reserved for hard-pinned ports. The Symfony CLI's
+                # dynamic pool starts at 8000 and climbs, and with ~44 registered projects
+                # it reaches well past 8007 — so an unpinned port here would drift and the
+                # cloudflared ingress in ~/.cloudflared/laptop-ssai.yml would silently
+                # proxy laptop-priceit.scanstationai.work to whatever project claimed it.
+                #
+                # Taken so far: 8010, 8011 (harvest), 8012 (lingua), 8020 (depot),
+                # 8021 (ssai). 8013 is the next free slot.
