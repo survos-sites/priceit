@@ -10,3 +10,10 @@ http:
                 #
                 # Taken so far: 8010, 8011 (harvest), 8012 (lingua), 8020 (depot),
                 # 8021 (ssai). 8013 is the next free slot.
+
+workers:
+    # Without this the suggestion message sits in the doctrine queue and items
+    # stay at "captured" forever — which looks exactly like the AI being broken.
+    messenger_suggest:
+        cmd: ['symfony', 'console', 'messenger:consume', 'async', '--time-limit=3600']
+        watch: ['config', 'src']

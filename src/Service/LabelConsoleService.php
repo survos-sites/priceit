@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\ItemStatus;
 use App\Repository\ItemRepository;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -63,8 +64,45 @@ final class LabelConsoleService
     }
 
     #[AsCommand('item:suggest', 'ask the model for a title, description and price')]
-    public function suggest(SymfonyStyle $io, #[Argument('item id')] int $id): int
-    {
+    public function suggest(
+        SymfonyStyle $io,
+        #[Argument('item id; omit with --pending to do them all')] ?int $id = null,
+        #[Option('every item still at "captured"')] bool $pending = false,
+    ): int {
+        if ($pending) {
+            // For items captured before the async dispatch existed, or whose
+            // message died in the failure transport.
+            $items = $this->items->findBy(['status' => ItemStatus::Captured], ['id' => 'ASC']);
+            if ($items === []) {
+                $io->success('Nothing pending.');
+
+                return Command::SUCCESS;
+            }
+
+            $failed = 0;
+            foreach ($items as $item) {
+                $result = $this->pricing->suggest($item);
+                $io->writeln(sprintf(
+                    ' %s <info>#%d</info> %s',
+                    $result['ok'] ? '✓' : '✗',
+                    $item->getId(),
+                    $result['message'],
+                ));
+                $result['ok'] || ++$failed;
+            }
+
+            $io->newLine();
+            $io->success(sprintf('%d of %d suggested.', \count($items) - $failed, \count($items)));
+
+            return $failed === 0 ? Command::SUCCESS : Command::FAILURE;
+        }
+
+        if ($id === null) {
+            $io->error('Give an item id, or pass --pending.');
+
+            return Command::INVALID;
+        }
+
         $item = $this->items->find($id);
         if ($item === null) {
             $io->error('No item '.$id);
