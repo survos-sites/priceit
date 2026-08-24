@@ -55,4 +55,8 @@ return [
     '@popperjs/core' => ['version' => '2.11.8'],
     'bootstrap/dist/css/bootstrap.min.css' => ['version' => '5.3.8', 'type' => 'css'],
     '@tabler/core/dist/css/tabler.min.css' => ['version' => '1.4.0', 'type' => 'css'],
+    '@floating-ui/dom' => ['version' => '1.8.0'],
+    '@floating-ui/core' => ['version' => '1.8.0'],
+    '@floating-ui/utils' => ['version' => '0.2.12'],
+    '@floating-ui/utils/dom' => ['version' => '0.2.12'],
 ];

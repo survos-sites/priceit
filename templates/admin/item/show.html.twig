@@ -3,6 +3,15 @@
 {% block title %}{{ item.title ?? 'Item #' ~ item.id }}{% endblock %}
 
 {% block body %}
+    {% for label, messages in app.flashes(['success', 'danger']) %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label }} alert-dismissible" role="alert">
+                {{ message }}
+                <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
     <div class="row row-cards">
         <div class="col-md-5">
             <div class="card">
@@ -44,6 +53,38 @@
                         </div>
                         <button type="submit" class="btn btn-success">Save</button>
                     </form>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <form method="post" action="{{ path('admin_item_suggest', {id: item.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('item_suggest_' ~ item.id) }}">
+                            <button type="submit" class="btn btn-primary" {{ aiConfigured and item.photos|length ? '' : 'disabled' }}>
+                                Suggest title &amp; price
+                            </button>
+                        </form>
+
+                        <form method="post" action="{{ path('admin_item_print', {id: item.id}) }}" class="d-flex gap-2 align-items-center">
+                            <input type="hidden" name="_token" value="{{ csrf_token('item_print_' ~ item.id) }}">
+                            <input type="number" name="copies" value="1" min="1" max="10"
+                                   class="form-control" style="width:5rem" aria-label="Copies">
+                            <button type="submit" class="btn btn-outline-primary">Print label</button>
+                        </form>
+                    </div>
+
+                    <div class="text-secondary mt-3 small">
+                        {% if not aiConfigured %}
+                            <div>Suggestions are off — <code>ANTHROPIC_API_KEY</code> isn't set.</div>
+                        {% elseif not item.photos|length %}
+                            <div>Suggestions need at least one photo.</div>
+                        {% endif %}
+                        {% if not depotConfigured %}
+                            <div>Printing is off — <code>DEPOT_BASE_URL</code> isn't set. The label is still built, so the failure message shows the ZPL path.</div>
+                        {% endif %}
+                        The label prints on the Zebra depot owns; the QR on it opens this page.
+                    </div>
                 </div>
             </div>
         </div>
