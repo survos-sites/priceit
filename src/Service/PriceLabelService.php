@@ -18,6 +18,21 @@ use App\Entity\Item;
  */
 final class PriceLabelService
 {
+    /**
+     * Character budgets, measured against the rendered label rather than
+     * calculated. ^FB takes a *maximum* line count and silently overprints
+     * anything past it — the extra lines land on top of the last one — so
+     * overflow has to be prevented here rather than absorbed by the printer.
+     *
+     * ^A0 is proportional, so these are approximate by nature: ~22 chars per
+     * line at 26/24 for the title (2 lines) and ~38 at 18/18 for the
+     * description (3 lines). The budgets sit well under raw capacity because
+     * word wrap can orphan most of a line — "Whimsical skeleton-and-sailboats"
+     * puts one word on line 1 and still needs a third line.
+     */
+    private const TITLE_CHARS = 32;
+    private const DESC_CHARS = 100;
+
     public function buildZpl(Item $item, ?string $qrValue = null): string
     {
         $price = $item->getPrice();
@@ -29,14 +44,14 @@ final class PriceLabelService
             '^LH0,0',
             '^CI27',         // UTF-8
             // Title, wrapped to two lines, left column.
-            '^FO14,14^A0N,26,24^FB300,2,2,L,0^FD'.$this->escape($this->titleFor($item)).'^FS',
+            '^FO14,14^A0N,26,24^FB300,2,2,L,0^FD'.$this->escape($this->fit($this->titleFor($item), self::TITLE_CHARS)).'^FS',
             // The price, deliberately oversized.
             '^FO14,84^A0N,86,80^FD'.$this->escape($priceText).'^FS',
         ];
 
         $description = trim((string) $item->getDescription());
         if ($description !== '') {
-            $lines[] = '^FO14,180^A0N,18,18^FB300,2,2,L,0^FD'.$this->escape($description).'^FS';
+            $lines[] = '^FO14,176^A0N,18,18^FB300,3,2,L,0^FD'.$this->escape($this->fit($description, self::DESC_CHARS)).'^FS';
         }
 
         if ($qrValue !== null && $qrValue !== '') {
@@ -47,6 +62,23 @@ final class PriceLabelService
         $lines[] = '^XZ';
 
         return implode("\n", $lines);
+    }
+
+    /** Trim to a character budget on a word boundary, with an ellipsis. */
+    private function fit(string $value, int $max): string
+    {
+        $value = trim($value);
+        if (mb_strlen($value) <= $max) {
+            return $value;
+        }
+
+        $cut = mb_substr($value, 0, $max - 1);
+        $lastSpace = mb_strrpos($cut, ' ');
+        if ($lastSpace !== false && $lastSpace > $max * 0.6) {
+            $cut = mb_substr($cut, 0, $lastSpace);
+        }
+
+        return rtrim($cut, " ,;:.-").'...';
     }
 
     private function titleFor(Item $item): string

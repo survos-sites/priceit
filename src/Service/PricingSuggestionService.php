@@ -39,18 +39,18 @@ final class PricingSuggestionService
             'title' => [
                 'type' => 'string',
                 'maxLength' => 60,
-                'description' => 'What the thing is. Plain and specific: "Pyrex mixing bowl set", not "Vintage kitchenware collection".',
+                'description' => 'What the thing is, under 32 characters so it fits a price tag. Plain and specific: "Pyrex bowl set", not "Vintage kitchenware collection".',
             ],
             'description' => [
                 'type' => 'string',
                 'maxLength' => 200,
-                'description' => 'One or two sentences with a bit of charm. Mention condition if it is visible.',
+                'description' => 'One or two short sentences with a bit of charm, under 100 characters — it has to fit on a price tag. Mention condition if it is visible.',
             ],
             'priceUsd' => [
                 'type' => 'number',
-                'minimum' => 0.5,
-                'maximum' => 500,
-                'description' => 'Suggested garage-sale asking price in US dollars. Garage-sale pricing, not eBay pricing.',
+                // Structured outputs reject minimum/maximum on number, so the
+                // range is stated here and clamped after the fact instead.
+                'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not eBay pricing.',
             ],
             'confidence' => [
                 'type' => 'string',
@@ -145,7 +145,10 @@ final class PricingSuggestionService
         $item->setTitle($data['title'] ?? null);
         $item->setDescription($data['description'] ?? null);
         if (isset($data['priceUsd'])) {
-            $item->setPrice(number_format((float) $data['priceUsd'], 2, '.', ''));
+            // The schema can't bound a number, so bound it here — a label with
+            // four figures on it is worse than one that is merely wrong.
+            $price = min(500.0, max(0.5, (float) $data['priceUsd']));
+            $item->setPrice(number_format($price, 2, '.', ''));
         }
         $item->setStatus(ItemStatus::Suggested);
         $this->em->flush();
