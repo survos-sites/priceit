@@ -15,7 +15,7 @@ use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-final readonly class QuickbaseInventoryCommands
+final readonly class AppCommands
 {
     public function __construct(
         private ItemRepository $items,
@@ -23,12 +23,12 @@ final readonly class QuickbaseInventoryCommands
     ) {
     }
 
-    #[AsCommand('item:quickbase:inventory', 'Preview or publish PriceIt items to Lions Inventory')]
-    public function inventory(
+    #[AsCommand('app:push', 'Create or update Lions Inventory records from PriceIt Items')]
+    public function push(
         SymfonyStyle $io,
         #[Argument('Comma-separated Item IDs; omit for recent tagged, unpublished items')] ?string $ids = null,
         #[Option('Maximum items when IDs are omitted')] int $limit = 3,
-        #[Option('Write to Quickbase; without this option the command is a dry run')] bool $send = false,
+        #[Option('Preview payloads without writing to Quickbase')] bool $dryRun = false,
     ): int {
         if ($limit < 1) {
             $io->error('--limit must be at least 1.');
@@ -60,7 +60,7 @@ final readonly class QuickbaseInventoryCommands
             $io->section(sprintf('Item %d · %s', $item->getId(), $item->getTitle() ?? '(untitled)'));
             $io->writeln(json_encode($this->publisher->payload($item), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
 
-            if (!$send) {
+            if ($dryRun) {
                 continue;
             }
 
@@ -75,8 +75,8 @@ final readonly class QuickbaseInventoryCommands
             $io->success(sprintf('Published as Quickbase Inventory record %d.', $item->getQuickbaseInventoryRecordId()));
         }
 
-        if (!$send) {
-            $io->note('Dry run only. Re-run with --send to write these records to Quickbase.');
+        if ($dryRun) {
+            $io->note('Dry run only. Re-run without --dry-run to write these records to Quickbase.');
         }
 
         return Command::SUCCESS;

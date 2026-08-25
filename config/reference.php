@@ -2400,6 +2400,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     workflow_paths?: list<scalar|Param|null>,
  *     async_transport_dsn?: scalar|Param|null, // Default: "doctrine://default"
  *     queue_driver?: "doctrine"|"rabbitmq"|Param, // Default: "doctrine"
+ *     retry_strategy?: array{
+ *         max_retries?: int|Param, // Default: 3
+ *         delay?: int|Param, // Default: 1000
+ *         multiplier?: float|Param, // Default: 2
+ *         max_delay?: int|Param, // Default: 0
+ *     },
  * }
  * @psalm-type SurvosSupervisorConfig = array{
  *     ring_buffer_lines?: int|Param, // Default: 5000
@@ -2552,6 +2558,21 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type SurvosDeploymentConfig = array{
  *     enabled?: bool|Param, // Default: true
  * }
+ * @psalm-type SurvosQuickbaseConfig = array{
+ *     realm?: scalar|Param|null, // Quickbase realm hostname, for example example.quickbase.com.
+ *     token?: scalar|Param|null, // Permanent Quickbase user token. Prefer an env-backed secret.
+ *     apps?: array<string, array{ // Default: []
+ *         id?: scalar|Param|null,
+ *         tables?: array<string, array{ // Default: []
+ *             id?: scalar|Param|null,
+ *             fields?: array<string, int|Param>,
+ *         }>,
+ *     }>,
+ *     base_uri?: scalar|Param|null, // Default: "https://api.quickbase.com/v1/"
+ *     user_agent?: scalar|Param|null, // Default: "survos/quickbase-bundle"
+ *     timeout?: float|Param, // Default: 30.0
+ *     max_retries?: int|Param, // Default: 3
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2579,6 +2600,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     survos_state?: SurvosStateConfig,
  *     survos_supervisor?: SurvosSupervisorConfig,
  *     flysystem?: FlysystemConfig,
+ *     survos_quickbase?: SurvosQuickbaseConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2610,6 +2632,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2638,6 +2661,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_state?: SurvosStateConfig,
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2668,6 +2692,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,
