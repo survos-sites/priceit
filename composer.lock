@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "64d36dcb32804c91d79c9f0f99482202",
+    "content-hash": "fe49014c1072a27566533009858ceca3",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -5949,16 +5949,16 @@
         },
         {
             "name": "survos/quickbase-bundle",
-            "version": "2.24.33",
+            "version": "2.24.34",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/quickbase-bundle.git",
-                "reference": "408c1dad3976bba486d0457d81e8f5a007a40860"
+                "reference": "f413542781882db1cb4cb5cab3813871d3e9ce52"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/408c1dad3976bba486d0457d81e8f5a007a40860",
-                "reference": "408c1dad3976bba486d0457d81e8f5a007a40860",
+                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/f413542781882db1cb4cb5cab3813871d3e9ce52",
+                "reference": "f413542781882db1cb4cb5cab3813871d3e9ce52",
                 "shasum": ""
             },
             "require": {
@@ -5999,7 +5999,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/quickbase-bundle/issues",
-                "source": "https://github.com/survos/quickbase-bundle/tree/2.24.33"
+                "source": "https://github.com/survos/quickbase-bundle/tree/2.24.34"
             },
             "funding": [
                 {
@@ -6007,7 +6007,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-25T16:46:32+00:00"
+            "time": "2026-08-25T17:39:05+00:00"
         },
         {
             "name": "survos/state-bundle",
@@ -8075,16 +8075,16 @@
         },
         {
             "name": "symfony/http-client",
-            "version": "v8.1.2",
+            "version": "v8.1.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/http-client.git",
-                "reference": "0cfdf7f9b58c92736c78e9ec2b49e48979c386be"
+                "reference": "9f941ed000bb11f16dc7eafed98a7b646d3b3e5d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/http-client/zipball/0cfdf7f9b58c92736c78e9ec2b49e48979c386be",
-                "reference": "0cfdf7f9b58c92736c78e9ec2b49e48979c386be",
+                "url": "https://api.github.com/repos/symfony/http-client/zipball/9f941ed000bb11f16dc7eafed98a7b646d3b3e5d",
+                "reference": "9f941ed000bb11f16dc7eafed98a7b646d3b3e5d",
                 "shasum": ""
             },
             "require": {
@@ -8107,7 +8107,7 @@
             "require-dev": {
                 "amphp/http-client": "^5.3.2",
                 "amphp/http-tunnel": "^2.0",
-                "guzzlehttp/guzzle": "^7.10",
+                "guzzlehttp/guzzle": "^7.10|^8.0",
                 "nyholm/psr7": "^1.0",
                 "php-http/httplug": "^1.0|^2.0",
                 "psr/http-client": "^1.0",
@@ -8148,7 +8148,7 @@
                 "http"
             ],
             "support": {
-                "source": "https://github.com/symfony/http-client/tree/v8.1.2"
+                "source": "https://github.com/symfony/http-client/tree/v8.1.5"
             },
             "funding": [
                 {
@@ -8168,7 +8168,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-07-29T07:22:54+00:00"
+            "time": "2026-08-21T17:47:34+00:00"
         },
         {
             "name": "symfony/http-client-contracts",
