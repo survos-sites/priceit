@@ -15,16 +15,21 @@ final readonly class QuickbaseInventoryPublisher
     private const TABLE = 'inventory';
 
     public function __construct(
-        private QuickbaseClientInterface $quickbase,
-        private QuickbaseAppRegistry $apps,
         private EntityManagerInterface $em,
+        private ?QuickbaseClientInterface $quickbase = null,
+        private ?QuickbaseAppRegistry $apps = null,
     ) {
+    }
+
+    public function isAvailable(): bool
+    {
+        return null !== $this->quickbase && null !== $this->apps;
     }
 
     /** @return array<int, mixed> */
     public function payload(Item $item): array
     {
-        $table = $this->apps->table(self::APP, self::TABLE);
+        $table = $this->apps()->table(self::APP, self::TABLE);
         $fields = $table['fields'];
 
         $payload = [
@@ -43,9 +48,9 @@ final readonly class QuickbaseInventoryPublisher
     /** @return array<string, mixed> */
     public function publish(Item $item): array
     {
-        $table = $this->apps->table(self::APP, self::TABLE);
+        $table = $this->apps()->table(self::APP, self::TABLE);
         $recordIdField = $this->field($table['fields'], 'record_id');
-        $result = $this->quickbase->upsertRecords(
+        $result = $this->quickbase()->upsertRecords(
             tableId: $table['id'],
             records: [$this->payload($item)],
             fieldsToReturn: [$recordIdField],
@@ -89,5 +94,17 @@ final readonly class QuickbaseInventoryPublisher
     {
         return $fields[$name]
             ?? throw new \LogicException(sprintf('Quickbase field "%s.%s.%s" is not configured.', self::APP, self::TABLE, $name));
+    }
+
+    private function quickbase(): QuickbaseClientInterface
+    {
+        return $this->quickbase
+            ?? throw new \LogicException('Quickbase publishing is temporarily disabled.');
+    }
+
+    private function apps(): QuickbaseAppRegistry
+    {
+        return $this->apps
+            ?? throw new \LogicException('Quickbase publishing is temporarily disabled.');
     }
 }

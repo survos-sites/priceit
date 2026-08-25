@@ -13,6 +13,17 @@ use Survos\QuickbaseBundle\QuickbaseAppRegistry;
 
 final class QuickbaseInventoryPublisherTest extends TestCase
 {
+    public function testIsUnavailableWithoutQuickbaseBundleServices(): void
+    {
+        $publisher = new QuickbaseInventoryPublisher($this->createStub(EntityManagerInterface::class));
+
+        self::assertFalse($publisher->isAvailable());
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Quickbase publishing is temporarily disabled.');
+        $publisher->payload(new Item('priceit-client-id'));
+    }
+
     public function testPublishesConfiguredFieldsAndStoresReturnedRecordId(): void
     {
         $item = (new Item('priceit-client-id'))
@@ -33,7 +44,7 @@ final class QuickbaseInventoryPublisherTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $publisher = new QuickbaseInventoryPublisher($quickbase, $this->apps(), $em);
+        $publisher = new QuickbaseInventoryPublisher($em, $quickbase, $this->apps());
         $publisher->publish($item);
 
         self::assertSame(42, $item->getQuickbaseInventoryRecordId());

@@ -2558,21 +2558,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type SurvosDeploymentConfig = array{
  *     enabled?: bool|Param, // Default: true
  * }
- * @psalm-type SurvosQuickbaseConfig = array{
- *     realm?: scalar|Param|null, // Quickbase realm hostname, for example example.quickbase.com.
- *     token?: scalar|Param|null, // Permanent Quickbase user token. Prefer an env-backed secret.
- *     apps?: array<string, array{ // Default: []
- *         id?: scalar|Param|null,
- *         tables?: array<string, array{ // Default: []
- *             id?: scalar|Param|null,
- *             fields?: array<string, int|Param>,
- *         }>,
- *     }>,
- *     base_uri?: scalar|Param|null, // Default: "https://api.quickbase.com/v1/"
- *     user_agent?: scalar|Param|null, // Default: "survos/quickbase-bundle"
- *     timeout?: float|Param, // Default: 30.0
- *     max_retries?: int|Param, // Default: 3
- * }
  * @psalm-type KnpuOauth2ClientConfig = array{
  *     http_client?: scalar|Param|null, // Service id of HTTP client to use (must implement GuzzleHttp\ClientInterface) // Default: null
  *     http_client_options?: array{
@@ -2628,7 +2613,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     survos_state?: SurvosStateConfig,
  *     survos_supervisor?: SurvosSupervisorConfig,
  *     flysystem?: FlysystemConfig,
- *     survos_quickbase?: SurvosQuickbaseConfig,
  *     knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *     survos_auth?: SurvosAuthConfig,
  *     "when@dev"?: array{
@@ -2662,7 +2646,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
- *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *     },
@@ -2693,7 +2676,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_state?: SurvosStateConfig,
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
- *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *     },
@@ -2726,7 +2708,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
- *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *     },

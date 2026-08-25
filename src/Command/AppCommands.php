@@ -30,6 +30,12 @@ final readonly class AppCommands
         #[Option('Maximum items when IDs are omitted')] int $limit = 3,
         #[Option('Preview payloads without writing to Quickbase')] bool $dryRun = false,
     ): int {
+        if (!$this->publisher->isAvailable()) {
+            $io->warning('Quickbase publishing is temporarily disabled.');
+
+            return Command::SUCCESS;
+        }
+
         if ($limit < 1) {
             $io->error('--limit must be at least 1.');
 
