@@ -47,6 +47,14 @@ class Item
     private string $clientId;
 
 
+    /**
+     * Ticked on the capture screen: print as soon as the AI has a price,
+     * without waiting for anyone to approve it.
+     */
+    #[ORM\Column]
+    #[Groups(['item:read'])]
+    public bool $printRequested = false;
+
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['item:read', 'item:write'])]
     private ?string $title = null;

@@ -33,4 +33,6 @@ return [
     League\FlysystemBundle\FlysystemBundle::class => ['all' => true],
     Survos\DeploymentBundle\SurvosDeploymentBundle::class => ['dev' => true, 'test' => true],
     Survos\QuickbaseBundle\SurvosQuickbaseBundle::class => ['all' => true],
+    KnpU\OAuth2ClientBundle\KnpUOAuth2ClientBundle::class => ['all' => true],
+    Survos\AuthBundle\SurvosAuthBundle::class => ['all' => true],
 ];

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Workflow;
 
 use App\Entity\Item;
+use App\Service\DepotPrintClient;
 use App\Service\PricingSuggestionService;
 use App\Workflow\ItemFlow as WF;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Workflow\Attribute\AsCompletedListener;
 use Symfony\Component\Workflow\Attribute\AsTransitionListener;
+use Symfony\Component\Workflow\Event\CompletedEvent;
 use Symfony\Component\Workflow\Event\TransitionEvent;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\Workflow\WorkflowInterface;
@@ -25,6 +29,9 @@ final readonly class ItemWorkflow
 {
     public function __construct(
         private PricingSuggestionService $pricing,
+        private DepotPrintClient $depot,
+        #[Autowire('%env(PRICEIT_PUBLIC_URL)%')]
+        private string $publicUrl,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         #[Target(WF::WORKFLOW_NAME)]
@@ -64,5 +71,61 @@ final readonly class ItemWorkflow
         // Stop the transition completing, so the item does not land in
         // `suggested` with nothing suggested.
         $event->setBlocked($result['message']);
+    }
+
+    /**
+     * "Print it now" from the capture screen.
+     *
+     * Printing unattended means accepting the AI's price, so the item is moved
+     * through `price` on the way to `tag` rather than jumping the queue — a
+     * label in someone's hand and a marking of "awaiting approval" would be a
+     * lie about what happened.
+     */
+    #[AsCompletedListener(WF::WORKFLOW_NAME, WF::TRANSITION_SUGGEST)]
+    public function onSuggested(CompletedEvent $event): void
+    {
+        $item = $event->getSubject();
+        \assert($item instanceof Item);
+
+        if (!$item->printRequested) {
+            return;
+        }
+
+        if ($this->itemWorkflow->can($item, WF::TRANSITION_PRICE)) {
+            $this->itemWorkflow->apply($item, WF::TRANSITION_PRICE);
+        }
+        if ($this->itemWorkflow->can($item, WF::TRANSITION_TAG)) {
+            $this->itemWorkflow->apply($item, WF::TRANSITION_TAG);
+        }
+
+        $this->em->flush();
+    }
+
+    /**
+     * The label actually comes out here, so every route to a printed label —
+     * the capture checkbox, the admin button, the CLI — goes through the same
+     * transition and leaves the same marking behind.
+     */
+    #[AsTransitionListener(WF::WORKFLOW_NAME, WF::TRANSITION_TAG)]
+    public function onTag(TransitionEvent $event): void
+    {
+        $item = $event->getSubject();
+        \assert($item instanceof Item);
+
+        // Built from config, not the router: this runs in a worker with no
+        // request, so there is no host to infer.
+        $qr = rtrim($this->publicUrl, '/').'/admin/items/'.$item->getId();
+
+        $result = $this->depot->printLabel($item, $qr);
+
+        if (!$result['ok']) {
+            $this->logger->warning('priceit: label did not print', [
+                'item' => $item->getId(),
+                'reason' => $result['message'],
+            ]);
+            // Blocked, so the item does not claim to be tagged when no label
+            // exists. Applying `tag` again is the retry.
+            $event->setBlocked($result['message']);
+        }
     }
 }

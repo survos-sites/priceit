@@ -55,10 +55,10 @@ final class PriceLabelService
         }
 
         if ($qrValue !== null && $qrValue !== '') {
-            $lines[] = '^FO330,20^BQN,2,5^FDQA,'.$this->escape($qrValue).'^FS';
+            $lines[] = '^FO318,22^BQN,2,4^FDQA,'.$this->escape($qrValue).'^FS';
         }
 
-        $lines[] = '^FO330,200^A0N,18,18^FD'.$this->escape('#'.$item->getId()).'^FS';
+        $lines[] = '^FO318,186^A0N,18,18^FD'.$this->escape('#'.$item->getId()).'^FS';
         $lines[] = '^XZ';
 
         return implode("\n", $lines);

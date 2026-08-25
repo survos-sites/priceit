@@ -37,6 +37,10 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
         // and we keep the string. It goes in before the flush so the kickoff
         // dispatched on postFlush hands the model a note it can actually read —
         // "the handle is chipped" is worth more than another angle of the mug.
+        // Ticked on the capture screen. Set before the flush, because the
+        // kickoff dispatched on postFlush is what eventually reads it.
+        $item->printRequested = (bool) ($request->metadata['print'] ?? false);
+
         $transcript = $request->metadata['transcript'] ?? null;
         if (\is_string($transcript) && trim($transcript) !== '') {
             $item->setTranscript(trim($transcript));

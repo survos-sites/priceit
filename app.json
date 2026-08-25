@@ -8,7 +8,7 @@
     "repository": "https://github.com/survos-sites/priceit",
     "scripts": {
         "dokku": {
-            "predeploy": "sh -c 'bin/console asset-map:compile && bin/console doctrine:schema:update --force --complete'",
+            "predeploy": "sh -c 'bin/console asset-map:compile && bin/console doctrine:migrations:migrate -n --allow-no-migration'",
             "postdeploy": "bin/console about"
         }
     },

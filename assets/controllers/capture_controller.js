@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -167,7 +167,12 @@ export default class extends Controller {
       await this.queue.enqueue({
         photos: this.photos,
         audio: this.audioBlob,
-        metadata: this._note() ? { transcript: this._note() } : {},
+        metadata: {
+          ...(this._note() ? { transcript: this._note() } : {}),
+          // Sent per capture, so it can be turned off for one odd item without
+          // changing a setting somewhere else.
+          print: this.hasPrintToggleTarget ? this.printToggleTarget.checked : false,
+        },
       });
     } catch (err) {
       this._setStatus(`Could not save locally: ${err.message}`);

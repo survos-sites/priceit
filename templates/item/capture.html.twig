@@ -27,6 +27,11 @@
                   placeholder="Anything the photo can't show — size, condition, what it's worth"
                   data-action="capture#noteChanged"></textarea>
 
+        <label class="capture-print">
+            <input type="checkbox" {{ stimulus_target('capture', 'printToggle') }} checked>
+            <span>Print the label as soon as the price is ready</span>
+        </label>
+
         <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
 
         <button type="button" {{ stimulus_target('capture', 'submitBtn') }} class="button button-fill button-large color-green" style="margin-top: 12px;" disabled data-action="capture#submit">
