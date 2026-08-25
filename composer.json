@@ -6,8 +6,8 @@
     "require": {
         "php": ">=8.4",
         "ext-ctype": "*",
-        "ext-iconv": "*",
         "ext-gd": "*",
+        "ext-iconv": "*",
         "ext-intl": "*",
         "ext-pdo_pgsql": "*",
         "anthropic-ai/sdk": "^0.43.0",
@@ -25,6 +25,7 @@
         "spomky-labs/pwa-bundle": "*",
         "survos/doc-bundle": "^2.19",
         "survos/fw-bundle": "*",
+        "survos/quickbase-bundle": "*",
         "survos/state-bundle": "^2.24",
         "survos/supervisor-bundle": "^2.24",
         "survos/tabler-bundle": "^2.24.24",

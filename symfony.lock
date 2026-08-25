@@ -116,6 +116,9 @@
     "survos/kit-bundle": {
         "version": "2.17.0"
     },
+    "survos/quickbase-bundle": {
+        "version": "2.24.33"
+    },
     "survos/state-bundle": {
         "version": "2.24.29"
     },

@@ -68,6 +68,15 @@ class Item
     #[Groups(['item:read'])]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(nullable: true)]
+    #[Groups(['item:read'])]
+    private ?int $quickbaseInventoryRecordId = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['item:read'])]
+    private ?\DateTimeImmutable $quickbaseExportedAt = null;
+
+    /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['item:read'])]
     private Collection $media;
@@ -144,6 +153,30 @@ class Item
         return $this->createdAt;
     }
 
+    public function getQuickbaseInventoryRecordId(): ?int
+    {
+        return $this->quickbaseInventoryRecordId;
+    }
+
+    public function setQuickbaseInventoryRecordId(?int $quickbaseInventoryRecordId): static
+    {
+        $this->quickbaseInventoryRecordId = $quickbaseInventoryRecordId;
+
+        return $this;
+    }
+
+    public function getQuickbaseExportedAt(): ?\DateTimeImmutable
+    {
+        return $this->quickbaseExportedAt;
+    }
+
+    public function setQuickbaseExportedAt(?\DateTimeImmutable $quickbaseExportedAt): static
+    {
+        $this->quickbaseExportedAt = $quickbaseExportedAt;
+
+        return $this;
+    }
+
     /** @return Collection<int, Media> */
     public function getMedia(): Collection
     {
@@ -163,10 +196,14 @@ class Item
     /** @return list<Media> */
     public function getPhotos(): array
     {
-        return array_values(array_filter(
-            $this->media->toArray(),
-            static fn (Media $m): bool => MediaKind::Photo === $m->getKind(),
-        ));
+        $photos = [];
+        foreach ($this->media as $media) {
+            if (MediaKind::Photo === $media->getKind()) {
+                $photos[] = $media;
+            }
+        }
+
+        return $photos;
     }
 
     public function getAudio(): ?Media

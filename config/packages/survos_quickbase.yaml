@@ -1,0 +1,16 @@
+survos_quickbase:
+    realm: '%env(QUICKBASE_REALM)%'
+    token: '%env(QUICKBASE_API_KEY)%'
+    apps:
+        lions:
+            id: bwa6visdy
+            tables:
+                inventory:
+                    id: bwa6visd6
+                    fields:
+                        record_id: 3
+                        sku: 6
+                        name: 15
+                        description: 17
+        rah:
+            id: bv4hfi7e8
