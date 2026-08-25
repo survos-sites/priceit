@@ -41,14 +41,13 @@ pwa:
                 enabled: true
             font_cache:
                 enabled: true
-            # Caches the capture page's own HTML so it opens with zero connectivity, not just
-            # its static assets. StaleWhileRevalidate over NetworkFirst: serve the cached shell
-            # instantly every time, refresh it in the background when a network is present --
-            # no network_timeout delay on every single load just to *maybe* get a fresher page.
+            # Cache only the capture shell. Caching every navigation made admin record pages
+            # stale after an edit: the POST succeeded, but its redirect was answered from the
+            # page cache until the service worker revalidated it in the background.
             resource_caches:
-                - match_callback: 'navigate'
+                - match_callback: 'route:item_capture'
                   strategy: 'StaleWhileRevalidate'
-                  cache_name: 'pages'
+                  cache_name: 'capture-page'
             # Last-resort fallback for a first-ever visit with zero warm cache.
             offline_fallback:
                 page:
