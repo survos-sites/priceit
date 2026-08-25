@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "11d3b66dd385f4877e3787559d699a94",
+    "content-hash": "de51365b6e0552f183f4a215f9641f59",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6193,21 +6193,22 @@
         },
         {
             "name": "survos/quickbase-bundle",
-            "version": "2.24.34",
+            "version": "2.24.35",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/quickbase-bundle.git",
-                "reference": "f413542781882db1cb4cb5cab3813871d3e9ce52"
+                "reference": "25aaf3cc655f1b683437f4e66f2cc2a0fe888a97"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/f413542781882db1cb4cb5cab3813871d3e9ce52",
-                "reference": "f413542781882db1cb4cb5cab3813871d3e9ce52",
+                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/25aaf3cc655f1b683437f4e66f2cc2a0fe888a97",
+                "reference": "25aaf3cc655f1b683437f4e66f2cc2a0fe888a97",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.5",
                 "survos/kit-bundle": "^2.6",
+                "survos/record-store-bundle": "^2.6",
                 "symfony/config": "^8.1",
                 "symfony/dependency-injection": "^8.1",
                 "symfony/framework-bundle": "^8.1",
@@ -6243,7 +6244,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/quickbase-bundle/issues",
-                "source": "https://github.com/survos/quickbase-bundle/tree/2.24.34"
+                "source": "https://github.com/survos/quickbase-bundle/tree/2.24.35"
             },
             "funding": [
                 {
@@ -6251,7 +6252,71 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-25T17:39:05+00:00"
+            "time": "2026-08-25T19:26:55+00:00"
+        },
+        {
+            "name": "survos/record-store-bundle",
+            "version": "2.24.36",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/record-store-bundle.git",
+                "reference": "a08bf5b295790bdb3b7e5d784fd0c53e24c74982"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/record-store-bundle/zipball/a08bf5b295790bdb3b7e5d784fd0c53e24c74982",
+                "reference": "a08bf5b295790bdb3b7e5d784fd0c53e24c74982",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.5",
+                "survos/kit-bundle": "^2.6",
+                "symfony/config": "^8.1",
+                "symfony/console": "^8.1",
+                "symfony/dependency-injection": "^8.1",
+                "symfony/framework-bundle": "^8.1",
+                "symfony/http-client": "^8.1",
+                "symfony/http-kernel": "^8.1"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.0",
+                "symfony/test-pack": "^1.0"
+            },
+            "type": "symfony-bundle",
+            "extra": {
+                "symfony": {
+                    "require": "^8.1"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Survos\\RecordStoreBundle\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Provider-neutral Symfony record stores for application-backed tables, with Grist support and adapter contracts.",
+            "keywords": [
+                "grist",
+                "low-code",
+                "quickbase",
+                "records",
+                "symfony"
+            ],
+            "support": {
+                "issues": "https://github.com/survos/record-store-bundle/issues",
+                "source": "https://github.com/survos/record-store-bundle/tree/2.24.36"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-25T19:53:58+00:00"
         },
         {
             "name": "survos/state-bundle",

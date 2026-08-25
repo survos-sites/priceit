@@ -2558,6 +2558,21 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type SurvosDeploymentConfig = array{
  *     enabled?: bool|Param, // Default: true
  * }
+ * @psalm-type SurvosQuickbaseConfig = array{
+ *     realm?: scalar|Param|null, // Quickbase realm hostname, for example example.quickbase.com.
+ *     token?: scalar|Param|null, // Permanent Quickbase user token. Prefer an env-backed secret.
+ *     apps?: array<string, array{ // Default: []
+ *         id?: scalar|Param|null,
+ *         tables?: array<string, array{ // Default: []
+ *             id?: scalar|Param|null,
+ *             fields?: array<string, int|Param>,
+ *         }>,
+ *     }>,
+ *     base_uri?: scalar|Param|null, // Default: "https://api.quickbase.com/v1/"
+ *     user_agent?: scalar|Param|null, // Default: "survos/quickbase-bundle"
+ *     timeout?: float|Param, // Default: 30.0
+ *     max_retries?: int|Param, // Default: 3
+ * }
  * @psalm-type KnpuOauth2ClientConfig = array{
  *     http_client?: scalar|Param|null, // Service id of HTTP client to use (must implement GuzzleHttp\ClientInterface) // Default: null
  *     http_client_options?: array{
@@ -2586,6 +2601,20 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     user_class?: scalar|Param|null, // Default: "App\\Entity\\User"
  *     dev_auto_login?: scalar|Param|null, // User identifier (usually an email) to auto-authenticate as. Registers DevAutoLoginAuthenticator, which must then be listed in a when@dev firewall's custom_authenticators. Ignored entirely outside debug mode — there is no production code path. Point it at an env var so it can be switched off without editing security.yaml. // Default: null
  * }
+ * @psalm-type SurvosRecordStoreConfig = array{
+ *     connections?: array<string, array{ // Default: []
+ *         driver?: scalar|Param|null,
+ *         options?: array<string, mixed>,
+ *     }>,
+ *     applications?: array<string, array{ // Default: []
+ *         connection?: scalar|Param|null,
+ *         id?: scalar|Param|null,
+ *         tables?: array<string, array{ // Default: []
+ *             id?: scalar|Param|null,
+ *             fields?: array<string, mixed>,
+ *         }>,
+ *     }>,
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2613,8 +2642,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     survos_state?: SurvosStateConfig,
  *     survos_supervisor?: SurvosSupervisorConfig,
  *     flysystem?: FlysystemConfig,
+ *     survos_quickbase?: SurvosQuickbaseConfig,
  *     knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *     survos_auth?: SurvosAuthConfig,
+ *     survos_record_store?: SurvosRecordStoreConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2646,8 +2677,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
+ *         survos_record_store?: SurvosRecordStoreConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2676,8 +2709,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_state?: SurvosStateConfig,
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
+ *         survos_record_store?: SurvosRecordStoreConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2708,8 +2743,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_supervisor?: SurvosSupervisorConfig,
  *         flysystem?: FlysystemConfig,
  *         survos_deployment?: SurvosDeploymentConfig,
+ *         survos_quickbase?: SurvosQuickbaseConfig,
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
+ *         survos_record_store?: SurvosRecordStoreConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

@@ -134,6 +134,9 @@
     "survos/quickbase-bundle": {
         "version": "2.24.33"
     },
+    "survos/record-store-bundle": {
+        "version": "2.24.36"
+    },
     "survos/state-bundle": {
         "version": "2.24.29"
     },
