@@ -1,11 +1,14 @@
 {
     "name": "survos-sites/priceit",
     "description": "Capture, describe and price items from a phone; print a label",
-    "keywords": ["php", "symfony"],
+    "keywords": [
+        "php",
+        "symfony"
+    ],
     "repository": "https://github.com/survos-sites/priceit",
     "scripts": {
         "dokku": {
-            "predeploy": "sh -c 'bin/console asset-map:compile'",
+            "predeploy": "sh -c 'bin/console asset-map:compile && bin/console doctrine:schema:update --force --complete'",
             "postdeploy": "bin/console about"
         }
     },
