@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ebd3c2f2d2a2fb494d801352dd943d1d",
+    "content-hash": "bae4ea268c17d65e221dbd58cf4f8381",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6193,16 +6193,16 @@
         },
         {
             "name": "survos/quickbase-bundle",
-            "version": "2.25.0",
+            "version": "2.26.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/quickbase-bundle.git",
-                "reference": "892df10bdd68a2b7608cc016eb93175f20c6e88a"
+                "reference": "df5792f03d49d4a9a2e6da448209069fd5a08c21"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/892df10bdd68a2b7608cc016eb93175f20c6e88a",
-                "reference": "892df10bdd68a2b7608cc016eb93175f20c6e88a",
+                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/df5792f03d49d4a9a2e6da448209069fd5a08c21",
+                "reference": "df5792f03d49d4a9a2e6da448209069fd5a08c21",
                 "shasum": ""
             },
             "require": {
@@ -6247,7 +6247,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/quickbase-bundle/issues",
-                "source": "https://github.com/survos/quickbase-bundle/tree/2.25.0"
+                "source": "https://github.com/survos/quickbase-bundle/tree/2.26.3"
             },
             "funding": [
                 {
@@ -6255,20 +6255,20 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-27T12:18:15+00:00"
+            "time": "2026-08-27T15:45:57+00:00"
         },
         {
             "name": "survos/quickbase-php",
-            "version": "2.26.2",
+            "version": "2.26.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/quickbase-php.git",
-                "reference": "2962966f7703ac2fd77ecc1ea0e026c563fa63f7"
+                "reference": "4ff307810c1750811858d060725be7e63380c6e6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/quickbase-php/zipball/2962966f7703ac2fd77ecc1ea0e026c563fa63f7",
-                "reference": "2962966f7703ac2fd77ecc1ea0e026c563fa63f7",
+                "url": "https://api.github.com/repos/survos/quickbase-php/zipball/4ff307810c1750811858d060725be7e63380c6e6",
+                "reference": "4ff307810c1750811858d060725be7e63380c6e6",
                 "shasum": ""
             },
             "require": {
@@ -6299,7 +6299,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/quickbase-php/issues",
-                "source": "https://github.com/survos/quickbase-php/tree/2.26.2"
+                "source": "https://github.com/survos/quickbase-php/tree/2.26.3"
             },
             "funding": [
                 {
@@ -6307,7 +6307,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-27T12:54:38+00:00"
+            "time": "2026-08-27T15:45:12+00:00"
         },
         {
             "name": "survos/record-store",
@@ -6351,21 +6351,22 @@
         },
         {
             "name": "survos/record-store-bundle",
-            "version": "2.24.36",
+            "version": "2.26.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/record-store-bundle.git",
-                "reference": "a08bf5b295790bdb3b7e5d784fd0c53e24c74982"
+                "reference": "2bf1ac06fd409dde932ccfc99cc3ab141635c866"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/record-store-bundle/zipball/a08bf5b295790bdb3b7e5d784fd0c53e24c74982",
-                "reference": "a08bf5b295790bdb3b7e5d784fd0c53e24c74982",
+                "url": "https://api.github.com/repos/survos/record-store-bundle/zipball/2bf1ac06fd409dde932ccfc99cc3ab141635c866",
+                "reference": "2bf1ac06fd409dde932ccfc99cc3ab141635c866",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.5",
                 "survos/kit-bundle": "^2.6",
+                "survos/record-store": "^2.24",
                 "symfony/config": "^8.1",
                 "symfony/console": "^8.1",
                 "symfony/dependency-injection": "^8.1",
@@ -6376,6 +6377,7 @@
             "require-dev": {
                 "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^13.0",
+                "survos/grist-php": "^2.24",
                 "symfony/test-pack": "^1.0"
             },
             "type": "symfony-bundle",
@@ -6403,7 +6405,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/record-store-bundle/issues",
-                "source": "https://github.com/survos/record-store-bundle/tree/2.24.36"
+                "source": "https://github.com/survos/record-store-bundle/tree/2.26.3"
             },
             "funding": [
                 {
@@ -6411,7 +6413,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-25T19:53:58+00:00"
+            "time": "2026-08-27T15:45:22+00:00"
         },
         {
             "name": "survos/state-bundle",
