@@ -8,6 +8,7 @@ use App\Entity\Item;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Hands a built label to depot, which owns the printer.
@@ -40,6 +41,23 @@ final class DepotPrintClient
     }
 
     /**
+     * Depot answers in JSON, but the tunnel in front of it does not: a laptop that has slept
+     * or dropped off wifi gets an HTML 502 from cloudflared. Decoding that as JSON threw
+     * "Syntax error", which was then reported as the reason printing failed -- so a sleeping
+     * laptop looked like a bug in the payload. The status code is the useful fact; keep it.
+     *
+     * @return array<string, mixed>
+     */
+    private static function decode(ResponseInterface $response): array
+    {
+        try {
+            return $response->toArray(false);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
      * @return array{ok: bool, message: string, zpl: string}
      */
     public function printLabel(Item $item, ?string $qrValue = null, int $copies = 1): array
@@ -69,7 +87,7 @@ final class DepotPrintClient
             ]);
 
             $status = $response->getStatusCode();
-            $body = $response->toArray(false);
+            $body = self::decode($response);
 
             if ($status === 200 && ($body['ok'] ?? false) === true) {
                 return ['ok' => true, 'message' => sprintf('Printed (depot job #%s).', $body['id'] ?? '?'), 'zpl' => $zpl];
@@ -80,7 +98,11 @@ final class DepotPrintClient
 
             return ['ok' => false, 'message' => 'Depot could not print it: '.$message, 'zpl' => $zpl];
         } catch (\Throwable $e) {
-            $this->logger->error('priceit: depot unreachable', ['item' => $item->getId(), 'error' => $e->getMessage()]);
+            $this->logger->error('priceit: depot unreachable', [
+                'item' => $item->getId(),
+                'url' => rtrim($this->depotBaseUrl, '/').'/api/print-jobs',
+                'error' => $e->getMessage(),
+            ]);
 
             return [
                 'ok' => false,

@@ -17,6 +17,7 @@ use Symfony\Component\Workflow\Attribute\AsTransitionListener;
 use Symfony\Component\Workflow\Event\CompletedEvent;
 use Symfony\Component\Workflow\Event\TransitionEvent;
 use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 use Symfony\Component\Workflow\WorkflowInterface;
 
 /**
@@ -70,9 +71,13 @@ final readonly class ItemWorkflow
 
         $this->em->flush();
 
-        // Stop the transition completing, so the item does not land in
-        // `suggested` with nothing suggested.
-        $event->setBlocked($result['message']);
+        // Stop the transition completing, so the item does not land in `suggested` with
+        // nothing suggested. A transition listener cannot block -- only a guard can, and a
+        // guard cannot know in advance whether the model will answer -- so aborting means
+        // throwing. Unrecoverable on purpose: the item is already recorded at `failed` and
+        // shows as needing attention, and an unreadable photo or a missing key will not fix
+        // itself on a retry a second later. Re-applying `suggest` from `failed` is the retry.
+        throw new UnrecoverableMessageHandlingException($result['message']);
     }
 
     /**
@@ -137,9 +142,13 @@ final readonly class ItemWorkflow
                 'item' => $item->getId(),
                 'reason' => $result['message'],
             ]);
-            // Blocked, so the item does not claim to be tagged when no label
-            // exists. Applying `tag` again is the retry.
-            $event->setBlocked($result['message']);
+
+            // Throwing, so the marking is never flushed and the item does not claim to be
+            // tagged when no label exists. Recoverable, unlike a failed suggestion: printing
+            // fails when the laptop holding the printer has slept or dropped off wifi, which
+            // is exactly the sort of thing that fixes itself, so messenger's backoff is the
+            // retry. Applying `tag` again by hand also still works -- it is re-enterable.
+            throw new \RuntimeException($result['message']);
         }
     }
 
