@@ -6,40 +6,59 @@ namespace App\Service;
 
 use App\Entity\Item;
 use Doctrine\ORM\EntityManagerInterface;
-use Survos\QuickbaseBundle\Contract\QuickbaseClientInterface;
-use Survos\QuickbaseBundle\QuickbaseAppRegistry;
+use Survos\Quickbase\Contract\QuickbaseClientInterface;
+use Survos\Quickbase\QuickbaseAppRegistry;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Vich\UploaderBundle\Storage\StorageInterface;
 
-final readonly class QuickbaseInventoryPublisher
+/**
+ * Pushes a tagged loan-closet item into the Quickbase Equipment table.
+ *
+ * Field IDs are resolved from the live schema by label rather than transcribed into YAML.
+ * Quickbase addresses fields only by number, but those numbers are assigned when a field is
+ * created, so a hand-maintained map is a copy of something the API already knows and drifts
+ * the moment anyone adds a column. SchemaSteward owns the schema; this reads it.
+ */
+final class QuickbaseInventoryPublisher
 {
-    private const APP = 'lions';
-    private const TABLE = 'inventory';
+    private const APP = 'closet';
+    private const TABLE = 'Equipment';
+
+    /** @var array<string, int>|null label => field ID, resolved once per process */
+    private ?array $fields = null;
+    private ?string $tableId = null;
 
     public function __construct(
-        private EntityManagerInterface $em,
-        private ?QuickbaseClientInterface $quickbase = null,
-        private ?QuickbaseAppRegistry $apps = null,
+        private readonly EntityManagerInterface $em,
+        private readonly ?QuickbaseClientInterface $quickbase = null,
+        private readonly ?QuickbaseAppRegistry $apps = null,
+        private readonly ?StorageInterface $storage = null,
+        #[Autowire('%env(PRICEIT_PUBLIC_URL)%')]
+        private readonly string $publicUrl = '',
     ) {
     }
 
     public function isAvailable(): bool
     {
-        return null !== $this->quickbase && null !== $this->apps;
+        return null !== $this->quickbase && null !== $this->apps && $this->apps->has(self::APP);
     }
 
     /** @return array<int, mixed> */
     public function payload(Item $item): array
     {
-        $table = $this->apps()->table(self::APP, self::TABLE);
-        $fields = $table['fields'];
+        $assetNumber = $item->getAssetNumber()
+            ?? throw new \LogicException(sprintf('Item %d has no asset number to publish under.', (int) $item->getId()));
 
         $payload = [
-            $this->field($fields, 'sku') => $item->getClientId(),
-            $this->field($fields, 'name') => $item->getTitle() ?? sprintf('PriceIt item %s', $item->getId() ?? 'new'),
-            $this->field($fields, 'description') => $item->getDescription() ?? '',
+            $this->field('Asset Number') => $assetNumber,
+            $this->field('Description') => $item->getDescription() ?? $item->getTitle() ?? '',
+            $this->field('Status') => 'Available',
+            $this->field('Added On') => $item->getCreatedAt()->format('Y-m-d'),
         ];
 
-        if (null !== $item->getQuickbaseInventoryRecordId()) {
-            $payload[$this->field($fields, 'record_id')] = $item->getQuickbaseInventoryRecordId();
+        $photoUrl = $this->photoUrl($item);
+        if (null !== $photoUrl) {
+            $payload[$this->field('Photo URL')] = $photoUrl;
         }
 
         return $payload;
@@ -48,63 +67,95 @@ final readonly class QuickbaseInventoryPublisher
     /** @return array<string, mixed> */
     public function publish(Item $item): array
     {
-        $table = $this->apps()->table(self::APP, self::TABLE);
-        $recordIdField = $this->field($table['fields'], 'record_id');
         $result = $this->quickbase()->upsertRecords(
-            tableId: $table['id'],
+            tableId: $this->tableId(),
             records: [$this->payload($item)],
-            fieldsToReturn: [$recordIdField],
+            // The asset number printed on the label is the key on both sides, so republishing
+            // the same item updates its row instead of creating a second one.
+            mergeFieldId: $this->field('Asset Number'),
+            fieldsToReturn: [3],
         );
 
-        $recordId = self::returnedRecordId($result, $recordIdField);
-
         $item
-            ->setQuickbaseInventoryRecordId((int) $recordId)
+            ->setQuickbaseInventoryRecordId(self::returnedRecordId($result))
             ->setQuickbaseExportedAt(new \DateTimeImmutable());
         $this->em->flush();
 
         return $result;
     }
 
-    /** @param array<string, mixed> $result */
-    private static function returnedRecordId(array $result, int $fieldId): int
+    private function field(string $label): int
     {
-        $data = $result['data'] ?? null;
-        if (!is_array($data) || !isset($data[0]) || !is_array($data[0])) {
-            throw new \UnexpectedValueException('Quickbase did not return Inventory record data.');
+        if (null === $this->fields) {
+            $this->fields = [];
+            foreach ($this->quickbase()->fields($this->tableId()) as $field) {
+                if (\is_string($field['label'] ?? null) && \is_int($field['id'] ?? null)) {
+                    $this->fields[$field['label']] = $field['id'];
+                }
+            }
         }
 
-        $field = $data[0][$fieldId] ?? null;
-        if (!is_array($field)) {
-            throw new \UnexpectedValueException('Quickbase did not return the Inventory record ID field.');
-        }
-
-        $recordId = $field['value'] ?? null;
-        if (!is_int($recordId) && !(is_string($recordId) && ctype_digit($recordId))) {
-            throw new \UnexpectedValueException('Quickbase returned an invalid Inventory record ID.');
-        }
-
-        return (int) $recordId;
+        return $this->fields[$label] ?? throw new \LogicException(sprintf(
+            'Quickbase table "%s" has no field labelled "%s". Run quickbase:schema:sync %s in SchemaSteward.',
+            self::TABLE,
+            $label,
+            self::APP,
+        ));
     }
 
-    /**
-     * @param array<string, int> $fields
-     */
-    private function field(array $fields, string $name): int
+    private function tableId(): string
     {
-        return $fields[$name]
-            ?? throw new \LogicException(sprintf('Quickbase field "%s.%s.%s" is not configured.', self::APP, self::TABLE, $name));
+        if (null !== $this->tableId) {
+            return $this->tableId;
+        }
+
+        $appId = $this->apps()->resolve(self::APP);
+        foreach ($this->quickbase()->tables($appId) as $table) {
+            if (self::TABLE === ($table['name'] ?? null) && \is_string($table['id'] ?? null)) {
+                return $this->tableId = $table['id'];
+            }
+        }
+
+        throw new \LogicException(sprintf('Quickbase app "%s" has no "%s" table.', self::APP, self::TABLE));
+    }
+
+    /** The photo has to be reachable by whoever opens the record, so it is a URL, not bytes. */
+    private function photoUrl(Item $item): ?string
+    {
+        $photo = $item->getPhotos()[0] ?? null;
+        if (null === $photo || null === $this->storage) {
+            return null;
+        }
+
+        $uri = $this->storage->resolveUri($photo, 'file');
+        if (null === $uri || '' === $uri) {
+            return null;
+        }
+
+        return str_starts_with($uri, 'http')
+            ? $uri
+            : rtrim($this->publicUrl, '/').'/'.ltrim($uri, '/');
+    }
+
+    /** @param array<string, mixed> $result */
+    private static function returnedRecordId(array $result): int
+    {
+        $value = $result['data'][0][3]['value'] ?? null;
+
+        if (!\is_int($value) && !(\is_string($value) && ctype_digit($value))) {
+            throw new \UnexpectedValueException('Quickbase did not return an Equipment record ID.');
+        }
+
+        return (int) $value;
     }
 
     private function quickbase(): QuickbaseClientInterface
     {
-        return $this->quickbase
-            ?? throw new \LogicException('Quickbase publishing is temporarily disabled.');
+        return $this->quickbase ?? throw new \LogicException('Quickbase is not configured.');
     }
 
     private function apps(): QuickbaseAppRegistry
     {
-        return $this->apps
-            ?? throw new \LogicException('Quickbase publishing is temporarily disabled.');
+        return $this->apps ?? throw new \LogicException('Quickbase is not configured.');
     }
 }

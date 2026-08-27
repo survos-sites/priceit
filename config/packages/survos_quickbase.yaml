@@ -3,14 +3,29 @@ survos_quickbase:
     token: '%env(QUICKBASE_API_KEY)%'
     apps:
         lions:
-            id: bwa6visdy
+            id: bwa87p6qv
             tables:
-                inventory:
-                    id: bwa6visd6
+                equipment_types:
+                    id: bwa87p636
                     fields:
                         record_id: 3
-                        sku: 6
-                        name: 15
-                        description: 17
+                        name: 6
+                        category: 7
+                        description: 8
+                equipment:
+                    id: bwa87p65y
+                    fields:
+                        record_id: 3
+                        equipment_type: 6
+                        asset_number: 7
+                        condition: 12
+                        status: 16
+                        photo: 17
+                        notes: 18
+        # The loan closet. No field map: SchemaSteward owns this schema, and the field IDs
+        # are read from the live table rather than transcribed here where they would drift.
+        closet:
+            id: bwbb4zint
+
         rah:
             id: bv4hfi7e8

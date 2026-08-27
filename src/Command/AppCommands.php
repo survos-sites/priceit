@@ -8,7 +8,7 @@ use App\Entity\Item;
 use App\Repository\ItemRepository;
 use App\Service\QuickbaseInventoryPublisher;
 use App\Workflow\ItemFlow;
-use Survos\QuickbaseBundle\Exception\QuickbaseApiException;
+use Survos\Quickbase\Exception\QuickbaseApiException;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;

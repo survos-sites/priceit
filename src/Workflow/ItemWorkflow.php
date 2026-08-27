@@ -7,6 +7,7 @@ namespace App\Workflow;
 use App\Entity\Item;
 use App\Service\DepotPrintClient;
 use App\Service\PricingSuggestionService;
+use App\Service\QuickbaseInventoryPublisher;
 use App\Workflow\ItemFlow as WF;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -30,6 +31,7 @@ final readonly class ItemWorkflow
     public function __construct(
         private PricingSuggestionService $pricing,
         private DepotPrintClient $depot,
+        private QuickbaseInventoryPublisher $inventory,
         #[Autowire('%env(PRICEIT_PUBLIC_URL)%')]
         private string $publicUrl,
         private EntityManagerInterface $em,
@@ -116,6 +118,14 @@ final readonly class ItemWorkflow
         // request, so there is no host to infer.
         $qr = rtrim($this->publicUrl, '/').'/admin/items/'.$item->getId();
 
+        if ($item->getProfile()->assignsAssetNumber()) {
+            // Minted before the label is built, so the number on the sticker exists before it
+            // is printed. Once assigned it never changes, so a reprint reproduces the same
+            // label rather than issuing the item a second identity.
+            $item->assignAssetNumber();
+            $this->em->flush();
+        }
+
         $result = $this->depot->printLabel($item, $qr);
 
         if (!$result['ok']) {
@@ -126,6 +136,47 @@ final readonly class ItemWorkflow
             // Blocked, so the item does not claim to be tagged when no label
             // exists. Applying `tag` again is the retry.
             $event->setBlocked($result['message']);
+        }
+    }
+
+    /**
+     * A tagged loan-closet item is dispatched to Quickbase.
+     *
+     * After tagging rather than before: the asset number is the natural key on both sides, and
+     * publishing a record whose label never came out would put a row in the closet for
+     * something no volunteer can identify on a shelf.
+     *
+     * A failure here does not block the transition. The label is printed and physically on the
+     * item by this point; refusing to record that would be a lie, and the export is
+     * re-runnable by its own key.
+     */
+    #[AsCompletedListener(WF::WORKFLOW_NAME, WF::TRANSITION_TAG)]
+    public function onTagged(CompletedEvent $event): void
+    {
+        $item = $event->getSubject();
+        \assert($item instanceof Item);
+
+        if (!$item->getProfile()->publishesToQuickbase()) {
+            return;
+        }
+
+        if (!$this->inventory->isAvailable()) {
+            $this->logger->warning('priceit: Quickbase is not configured, item not published', [
+                'item' => $item->getId(),
+            ]);
+
+            return;
+        }
+
+        try {
+            $this->inventory->publish($item);
+            $this->em->flush();
+        } catch (\Throwable $e) {
+            $this->logger->error('priceit: could not publish to the loan closet', [
+                'item' => $item->getId(),
+                'assetNumber' => $item->getAssetNumber(),
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

@@ -12,6 +12,7 @@ use Anthropic\Messages\OutputConfig;
 use Anthropic\Messages\TextBlockParam;
 use App\Entity\Item;
 use App\Entity\MediaKind;
+use App\Profile\CaptureProfile;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -31,10 +32,10 @@ final class PricingSuggestionService
      * Deliberately small. Every field ends up on a 2.25×1.25in label or in a
      * sale listing, so the schema does the truncating rather than the printer.
      */
-    private const SCHEMA = [
+    private const BASE_SCHEMA = [
         'type' => 'object',
         'additionalProperties' => false,
-        'required' => ['title', 'description', 'priceUsd', 'confidence'],
+        'required' => ['title', 'description', 'category', 'equipmentType', 'confidence'],
         'properties' => [
             'title' => [
                 'type' => 'string',
@@ -46,11 +47,15 @@ final class PricingSuggestionService
                 'maxLength' => 200,
                 'description' => 'One or two short sentences with a bit of charm, under 100 characters — it has to fit on a price tag. Mention condition if it is visible.',
             ],
-            'priceUsd' => [
-                'type' => 'number',
-                // Structured outputs reject minimum/maximum on number, so the
-                // range is stated here and clamped after the fact instead.
-                'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not eBay pricing.',
+            'category' => [
+                'type' => 'string',
+                'maxLength' => 100,
+                'description' => 'Broad reusable inventory category such as Mobility Aid, Medical Equipment, Bathroom Safety, Home Modification, or Diagnostic Equipment.',
+            ],
+            'equipmentType' => [
+                'type' => 'string',
+                'maxLength' => 150,
+                'description' => 'Specific reusable equipment type such as Manual Wheelchair, Folding Walker, Hospital Bed, or Shower Chair.',
             ],
             'confidence' => [
                 'type' => 'string',
@@ -60,7 +65,19 @@ final class PricingSuggestionService
         ],
     ];
 
-    private const SYSTEM = <<<'TXT'
+    /**
+     * Asked for only when the profile wants a price. A loan-closet item has no asking price,
+     * and prompting for one anyway invites the model to invent a number that would then be
+     * printed on a label for something being lent out free of charge.
+     */
+    private const PRICE_PROPERTY = [
+        'type' => 'number',
+        // Structured outputs reject minimum/maximum on number, so the range is stated here
+        // and clamped after the fact instead.
+        'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not eBay pricing.',
+    ];
+
+    private const SYSTEM_AUCTION = <<<'TXT'
         You are pricing items for a neighbourhood garage sale. You see photos of one item
         and sometimes a transcript of the seller talking about it.
 
@@ -73,6 +90,24 @@ final class PricingSuggestionService
         Say what you actually see. If the photo is too dark or too cluttered to identify
         the item, say so in the description and set confidence to low rather than inventing
         a plausible object.
+        TXT;
+
+    private const SYSTEM_MEDICAL = <<<'TXT'
+        You are cataloguing medical and mobility equipment as it arrives at a Lions Club loan
+        closet. The closet lends this equipment to people at no charge. You see photos of one
+        item and sometimes a transcript of a volunteer describing it.
+
+        Nothing here is for sale. Do not estimate a price, a value, or what it might be worth.
+
+        Identify the item well enough that a volunteer can find the right one on a shelf, and
+        that someone deciding whether it suits a person's needs can trust what you wrote. Give
+        the manufacturer and model when they are legible, and any size, weight capacity, or
+        adjustment range that is actually marked on the item.
+
+        Report only what is visible. If a photo is too dark or cluttered to identify the item,
+        or a label is unreadable, say so and set confidence to low. Someone may rely on this
+        description to decide whether a piece of equipment is safe for a person to use, so an
+        invented detail is worse than an absent one.
         TXT;
 
     public function __construct(
@@ -92,6 +127,27 @@ final class PricingSuggestionService
         return $this->apiKey !== '';
     }
 
+    /** @return array<string, mixed> */
+    private static function schemaFor(CaptureProfile $profile): array
+    {
+        $schema = self::BASE_SCHEMA;
+
+        if ($profile->wantsPrice()) {
+            $schema['properties']['priceUsd'] = self::PRICE_PROPERTY;
+            $schema['required'][] = 'priceUsd';
+        }
+
+        return $schema;
+    }
+
+    private static function systemFor(CaptureProfile $profile): string
+    {
+        return match ($profile) {
+            CaptureProfile::Auction => self::SYSTEM_AUCTION,
+            CaptureProfile::MedicalEquipment => self::SYSTEM_MEDICAL,
+        };
+    }
+
     /**
      * @return array{ok: bool, message: string}
      */
@@ -106,6 +162,8 @@ final class PricingSuggestionService
             return ['ok' => false, 'message' => 'This item has no readable photo to look at.'];
         }
 
+        $profile = $item->getProfile();
+
         $content = $images;
         $content[] = TextBlockParam::with(text: $this->prompt($item));
 
@@ -113,9 +171,9 @@ final class PricingSuggestionService
             $message = (new Client(apiKey: $this->apiKey))->messages->create(
                 model: $this->model,
                 maxTokens: 1024,
-                system: self::SYSTEM,
+                system: self::systemFor($profile),
                 outputConfig: OutputConfig::with(
-                    format: JSONOutputFormat::with(schema: self::SCHEMA),
+                    format: JSONOutputFormat::with(schema: self::schemaFor($profile)),
                 ),
                 messages: [['role' => 'user', 'content' => $content]],
             );
@@ -145,7 +203,9 @@ final class PricingSuggestionService
 
         $item->setTitle($data['title'] ?? null);
         $item->setDescription($data['description'] ?? null);
-        if (isset($data['priceUsd'])) {
+        $item->setCategory($data['category'] ?? null);
+        $item->setEquipmentType($data['equipmentType'] ?? null);
+        if ($profile->wantsPrice() && isset($data['priceUsd'])) {
             // The schema can't bound a number, so bound it here — a label with
             // four figures on it is worse than one that is merely wrong.
             $price = min(500.0, max(0.5, (float) $data['priceUsd']));
@@ -154,6 +214,17 @@ final class PricingSuggestionService
         // The marking is the workflow's business, not this service's — it is
         // called from inside the `suggest` transition, which moves the item.
         $this->em->flush();
+
+        if (!$profile->wantsPrice()) {
+            return [
+                'ok' => true,
+                'message' => sprintf(
+                    '%s (%s confidence)',
+                    $data['title'] ?? '?',
+                    $data['confidence'] ?? '?',
+                ),
+            ];
+        }
 
         return [
             'ok' => true,
@@ -228,10 +299,16 @@ final class PricingSuggestionService
 
     private function prompt(Item $item): string
     {
-        $transcript = trim((string) $item->getTranscript());
+        $profile = $item->getProfile();
+        $speaker = $profile->wantsPrice() ? 'seller' : 'volunteer';
 
-        return $transcript !== ''
-            ? "Here is the item. The seller said: \"{$transcript}\"\n\nTitle it, describe it, and price it for the sale."
-            : 'Here is the item. Title it, describe it, and price it for the sale.';
+        $prompt = $profile->promptGuidance();
+
+        $transcript = trim((string) $item->getTranscript());
+        if ('' !== $transcript) {
+            $prompt .= sprintf("\n\nThe %s said: \"%s\"", $speaker, $transcript);
+        }
+
+        return $prompt;
     }
 }

@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
+use App\Profile\CaptureProfile;
 use App\Repository\ItemRepository;
 use App\Workflow\ItemFlow;
 use Survos\StateBundle\Traits\MarkingTrait;
@@ -55,6 +56,23 @@ class Item
     #[Groups(['item:read'])]
     public bool $printRequested = false;
 
+    /**
+     * Chosen on the capture screen. Decides what the model is asked for, what the label
+     * carries, and whether confirming pushes the item to the loan closet.
+     */
+    #[ORM\Column(length: 32, enumType: CaptureProfile::class, options: ['default' => 'auction'])]
+    #[Groups(['item:read'])]
+    private CaptureProfile $profile = CaptureProfile::Auction;
+
+    /**
+     * Human-readable identifier printed on a loan-closet label and used as the natural key in
+     * Quickbase. Derived from the item's own sequence rather than hashed or randomized, so the
+     * number on the sticker is the number in the table.
+     */
+    #[ORM\Column(length: 32, nullable: true, unique: true)]
+    #[Groups(['item:read'])]
+    private ?string $assetNumber = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['item:read', 'item:write'])]
     private ?string $title = null;
@@ -62,6 +80,14 @@ class Item
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Groups(['item:read', 'item:write'])]
     private ?string $description = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    #[Groups(['item:read', 'item:write'])]
+    private ?string $category = null;
+
+    #[ORM\Column(length: 150, nullable: true)]
+    #[Groups(['item:read', 'item:write'])]
+    private ?string $equipmentType = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 8, scale: 2, nullable: true)]
     #[Groups(['item:read', 'item:write'])]
@@ -89,12 +115,46 @@ class Item
     #[Groups(['item:read'])]
     private Collection $media;
 
-    public function __construct(string $clientId)
+    public function __construct(string $clientId, CaptureProfile $profile = CaptureProfile::Auction)
     {
         $this->clientId = $clientId;
+        $this->profile = $profile;
         $this->marking = ItemFlow::PLACE_NEW;
         $this->createdAt = new \DateTimeImmutable();
         $this->media = new ArrayCollection();
+    }
+
+    public function getProfile(): CaptureProfile
+    {
+        return $this->profile;
+    }
+
+    public function setProfile(CaptureProfile $profile): static
+    {
+        $this->profile = $profile;
+
+        return $this;
+    }
+
+    public function getAssetNumber(): ?string
+    {
+        return $this->assetNumber;
+    }
+
+    /**
+     * Mint the asset number, once, from the item's own id.
+     *
+     * Only meaningful after a flush, which is the point: the id is a real sequence, so LC-00042
+     * is short enough to read aloud over the phone and unique without a hash. Re-minting is a
+     * no-op so a reprint never changes the number already stuck to the item.
+     */
+    public function assignAssetNumber(string $prefix = 'LC'): ?string
+    {
+        if (null !== $this->assetNumber || null === $this->id) {
+            return $this->assetNumber;
+        }
+
+        return $this->assetNumber = sprintf('%s-%05d', $prefix, $this->id);
     }
 
     public function getId(): ?int
@@ -128,6 +188,30 @@ class Item
     public function setDescription(?string $description): static
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function getCategory(): ?string
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?string $category): static
+    {
+        $this->category = $category;
+
+        return $this;
+    }
+
+    public function getEquipmentType(): ?string
+    {
+        return $this->equipmentType;
+    }
+
+    public function setEquipmentType(?string $equipmentType): static
+    {
+        $this->equipmentType = $equipmentType;
 
         return $this;
     }

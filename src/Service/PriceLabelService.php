@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Item;
+use App\Profile\CaptureProfile;
 
 /**
  * Builds ZPL for a garage-sale price tag.
@@ -35,6 +36,10 @@ final class PriceLabelService
 
     public function buildZpl(Item $item, ?string $qrValue = null): string
     {
+        if ($item->getProfile()->wantsQrCode()) {
+            return $this->buildLoanClosetZpl($item, $qrValue);
+        }
+
         $price = $item->getPrice();
         $priceText = $price !== null ? '$'.rtrim(rtrim(number_format((float) $price, 2, '.', ''), '0'), '.') : '--';
 
@@ -54,11 +59,53 @@ final class PriceLabelService
             $lines[] = '^FO14,176^A0N,18,18^FB300,3,2,L,0^FD'.$this->escape($this->fit($description, self::DESC_CHARS)).'^FS';
         }
 
-        if ($qrValue !== null && $qrValue !== '') {
-            $lines[] = '^FO318,22^BQN,2,4^FDQA,'.$this->escape($qrValue).'^FS';
+        // No QR code on an auction tag. A buyer across a table wants the price, and every
+        // dot spent on a code nobody scans is a dot not spent on the number they came for.
+        $lines[] = '^FO318,186^A0N,18,18^FD'.$this->escape('#'.$item->getId()).'^FS';
+        $lines[] = '^XZ';
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * A loan-closet label: no price, because nothing here is for sale.
+     *
+     * The asset number takes the space and the weight the price has on an auction tag -- it is
+     * the thing a volunteer reads across a room or says over the phone. The QR code carries the
+     * same value, so scanning and reading aloud agree; a label whose code and digits disagreed
+     * would be worse than one with no code at all.
+     */
+    private function buildLoanClosetZpl(Item $item, ?string $qrValue = null): string
+    {
+        $assetNumber = $item->getAssetNumber() ?? '';
+
+        // The code encodes the asset number itself, not a URL: it is the natural key of the
+        // Equipment record in Quickbase, so a scan and a person reading the label aloud produce
+        // the same string. A code that resolved to something the printed digits did not match
+        // would be worse than no code at all.
+        $code = $assetNumber;
+
+        $lines = [
+            '^XA',
+            '^MMT',
+            '^LH0,0',
+            '^CI27',
+            '^FO14,14^A0N,26,24^FB300,2,2,L,0^FD'.$this->escape($this->fit($this->titleFor($item), self::TITLE_CHARS)).'^FS',
+            // Smaller than an auction price: an asset number is read, not shouted across a
+            // table, and it has to stay legible at ten characters rather than four.
+            '^FO14,92^A0N,54,50^FD'.$this->escape($assetNumber !== '' ? $assetNumber : '--').'^FS',
+        ];
+
+        $description = trim((string) $item->getDescription());
+        if ($description !== '') {
+            $lines[] = '^FO14,158^A0N,18,18^FB300,3,2,L,0^FD'.$this->escape($this->fit($description, self::DESC_CHARS)).'^FS';
         }
 
-        $lines[] = '^FO318,186^A0N,18,18^FD'.$this->escape('#'.$item->getId()).'^FS';
+        if ($code !== '') {
+            $lines[] = '^FO318,22^BQN,2,5^FDQA,'.$this->escape($code).'^FS';
+        }
+
+        $lines[] = '^FO318,196^A0N,16,16^FD'.$this->escape('Lions loan closet').'^FS';
         $lines[] = '^XZ';
 
         return implode("\n", $lines);

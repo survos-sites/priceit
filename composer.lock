@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "de51365b6e0552f183f4a215f9641f59",
+    "content-hash": "ebd3c2f2d2a2fb494d801352dd943d1d",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6193,27 +6193,30 @@
         },
         {
             "name": "survos/quickbase-bundle",
-            "version": "2.24.35",
+            "version": "2.25.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/quickbase-bundle.git",
-                "reference": "25aaf3cc655f1b683437f4e66f2cc2a0fe888a97"
+                "reference": "892df10bdd68a2b7608cc016eb93175f20c6e88a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/25aaf3cc655f1b683437f4e66f2cc2a0fe888a97",
-                "reference": "25aaf3cc655f1b683437f4e66f2cc2a0fe888a97",
+                "url": "https://api.github.com/repos/survos/quickbase-bundle/zipball/892df10bdd68a2b7608cc016eb93175f20c6e88a",
+                "reference": "892df10bdd68a2b7608cc016eb93175f20c6e88a",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.5",
                 "survos/kit-bundle": "^2.6",
+                "survos/quickbase-php": "^2.24",
+                "survos/record-store": "^2.24",
                 "survos/record-store-bundle": "^2.6",
                 "symfony/config": "^8.1",
                 "symfony/dependency-injection": "^8.1",
                 "symfony/framework-bundle": "^8.1",
                 "symfony/http-client": "^8.1",
-                "symfony/http-kernel": "^8.1"
+                "symfony/http-kernel": "^8.1",
+                "symfony/yaml": "^8.1"
             },
             "require-dev": {
                 "phpstan/phpstan": "^2.0",
@@ -6244,7 +6247,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/quickbase-bundle/issues",
-                "source": "https://github.com/survos/quickbase-bundle/tree/2.24.35"
+                "source": "https://github.com/survos/quickbase-bundle/tree/2.25.0"
             },
             "funding": [
                 {
@@ -6252,7 +6255,99 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-25T19:26:55+00:00"
+            "time": "2026-08-27T12:18:15+00:00"
+        },
+        {
+            "name": "survos/quickbase-php",
+            "version": "2.26.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/quickbase-php.git",
+                "reference": "2962966f7703ac2fd77ecc1ea0e026c563fa63f7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/quickbase-php/zipball/2962966f7703ac2fd77ecc1ea0e026c563fa63f7",
+                "reference": "2962966f7703ac2fd77ecc1ea0e026c563fa63f7",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.5",
+                "survos/record-store": "^2.24",
+                "symfony/http-client-contracts": "^3.7"
+            },
+            "suggest": {
+                "symfony/http-client": "A PSR-compatible HttpClientInterface implementation; any implementation will do."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Survos\\Quickbase\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Quickbase JSON REST API client, record-store adapter, and QBL query support. Framework-agnostic -- usable from Symfony, WordPress, or plain PHP.",
+            "keywords": [
+                "api",
+                "client",
+                "qbl",
+                "quickbase",
+                "record-store"
+            ],
+            "support": {
+                "issues": "https://github.com/survos/quickbase-php/issues",
+                "source": "https://github.com/survos/quickbase-php/tree/2.26.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-27T12:54:38+00:00"
+        },
+        {
+            "name": "survos/record-store",
+            "version": "2.26.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/record-store.git",
+                "reference": "293e30ee0b9bc305ffa446c7778ce2e89e439383"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/record-store/zipball/293e30ee0b9bc305ffa446c7778ce2e89e439383",
+                "reference": "293e30ee0b9bc305ffa446c7778ce2e89e439383",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Survos\\RecordStore\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Provider-neutral contracts and models for application-backend record stores (Grist, Quickbase, ...). Framework-agnostic: no Symfony kernel, no container.",
+            "support": {
+                "issues": "https://github.com/survos/record-store/issues",
+                "source": "https://github.com/survos/record-store/tree/2.26.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-27T12:26:40+00:00"
         },
         {
             "name": "survos/record-store-bundle",

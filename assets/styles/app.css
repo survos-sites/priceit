@@ -70,6 +70,30 @@
 }
 
 
+/* What kind of thing this is. Above the print toggle because it changes what the
+   label will say, so it has to be chosen before deciding whether to print it. */
+.capture-profile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 12px 0;
+    font-size: 15px;
+    color: #1c1c1e;
+}
+.capture-profile-select {
+    /* 44px is the smallest comfortable touch target, and this gets used one-handed
+       while holding the item in the other. 16px stops iOS zooming the page on focus. */
+    flex: 1;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 16px;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #c7c7cc;
+    border-radius: 8px;
+}
+
 /* Print-now toggle. Sits under the buttons because it describes what happens
    after Save, not another thing to press. */
 .capture-print {

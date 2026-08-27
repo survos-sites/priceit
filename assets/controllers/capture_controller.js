@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -157,6 +157,14 @@ export default class extends Controller {
     }
   }
 
+  /** Keep the note prompt honest: it asks a different question per profile. */
+  profileChanged() {
+    if (!this.hasProfileTarget || !this.hasNoteTarget) return;
+    const option = this.profileTarget.selectedOptions[0];
+    const placeholder = option?.dataset.notePlaceholder;
+    if (placeholder) this.noteTarget.placeholder = placeholder;
+  }
+
   async submit() {
     if (this.photos.length === 0) {
       this._setStatus('Take at least one photo first');
@@ -169,6 +177,9 @@ export default class extends Controller {
         audio: this.audioBlob,
         metadata: {
           ...(this._note() ? { transcript: this._note() } : {}),
+          // Chosen per capture: an auction lot and a loan-closet item are photographed
+          // the same way but described, labelled, and filed differently.
+          profile: this.hasProfileTarget ? this.profileTarget.value : 'auction',
           // Sent per capture, so it can be turned off for one odd item without
           // changing a setting somewhere else.
           print: this.hasPrintToggleTarget ? this.printToggleTarget.checked : false,

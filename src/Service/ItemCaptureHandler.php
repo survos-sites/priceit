@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\Item;
 use App\Entity\Media;
 use App\Entity\MediaKind;
+use App\Profile\CaptureProfile;
 use App\Repository\ItemRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\CameraBundle\Contract\CaptureHandlerInterface;
@@ -22,6 +23,13 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
     ) {
     }
 
+    private static function profileFrom(mixed $value): CaptureProfile
+    {
+        return \is_string($value)
+            ? (CaptureProfile::tryFrom($value) ?? CaptureProfile::Auction)
+            : CaptureProfile::Auction;
+    }
+
     public function handle(CaptureRequest $request): CaptureResult
     {
         // Idempotent: the outbox retries a capture verbatim on a transient network failure,
@@ -31,7 +39,11 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
             return new CaptureResult((string) $existing->getId(), (string) $existing->marking);
         }
 
-        $item = new Item($request->clientId);
+        // The profile is chosen on the capture screen and decides everything downstream: what
+        // the model is asked for, what the label carries, and where the item ends up. An
+        // unrecognized value falls back to the auction profile rather than failing the upload
+        // -- the phone is often on a bad connection and the photos matter more.
+        $item = new Item($request->clientId, self::profileFrom($request->metadata['profile'] ?? null));
 
         // The spoken note arrives as text, not audio: the browser transcribes it
         // and we keep the string. It goes in before the flush so the kickoff

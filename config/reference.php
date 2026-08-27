@@ -2563,6 +2563,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     token?: scalar|Param|null, // Permanent Quickbase user token. Prefer an env-backed secret.
  *     apps?: array<string, array{ // Default: []
  *         id?: scalar|Param|null,
+ *         readonly?: bool|Param, // Mark this application as inspection-only for consumers such as SchemaSteward. // Default: false
  *         tables?: array<string, array{ // Default: []
  *             id?: scalar|Param|null,
  *             fields?: array<string, int|Param>,

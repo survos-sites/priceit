@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Profile\CaptureProfile;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,6 @@ final class ItemController extends AbstractController
             $this->profiler?->disable();
         }
 
-        return $this->render('item/capture.html.twig');
+        return $this->render('item/capture.html.twig', ['profiles' => CaptureProfile::cases()]);
     }
 }
