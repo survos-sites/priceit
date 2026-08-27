@@ -20,10 +20,11 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class ItemController extends AbstractController
 {
     #[Route('/', name: 'item_index')]
-    public function index(ItemRepository $items): Response
+    public function index(ItemRepository $items, DepotPrintClient $depot): Response
     {
         return $this->render('admin/item/index.html.twig', [
             'items' => $items->findBy([], ['createdAt' => 'DESC']),
+            'depotConfigured' => $depot->isConfigured(),
         ]);
     }
 
@@ -66,7 +67,12 @@ final class ItemController extends AbstractController
         $result = $depot->printLabel($item, $qr, max(1, (int) $request->request->get('copies', 1)));
         $this->addFlash($result['ok'] ? 'success' : 'danger', $result['message']);
 
-        return $this->redirectToRoute('admin_item_show', ['id' => $item->getId()]);
+        // Printing a row from the list should leave you on the list, mid-way down a stack of
+        // items you are working through, rather than on the detail page of the one you just
+        // dealt with.
+        return 'index' === $request->request->get('redirect')
+            ? $this->redirectToRoute('admin_item_index')
+            : $this->redirectToRoute('admin_item_show', ['id' => $item->getId()]);
     }
 
     #[Route('/items/{id}/edit', name: 'item_edit', methods: ['POST'])]

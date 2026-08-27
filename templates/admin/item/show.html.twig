@@ -1,6 +1,6 @@
 {% extends 'admin/base.html.twig' %}
 
-{% block title %}{{ item.title ?? 'Item #' ~ item.id }}{% endblock %}
+{% block title %}{{ item.title ?? ('Item #' ~ item.id) }}{% endblock %}
 
 {% block body %}
     {% for label, messages in app.flashes(['success', 'danger']) %}

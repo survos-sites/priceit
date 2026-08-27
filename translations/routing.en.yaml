@@ -1,0 +1,10 @@
+# Page headings, keyed by route name.
+#
+# survos/tabler-bundle titles a page by running its route name through this domain, and falls
+# back to the route name itself when there is no entry -- which is why the review screen was
+# headed "admin_item_index". The landing page sends people there under the label "Review &
+# price items", so that is what the page they arrive on should call itself.
+admin_item_index: Review & price items
+admin_item_show: Item
+item_capture: Capture item
+app_landing: PriceIt

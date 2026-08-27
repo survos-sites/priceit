@@ -14,6 +14,7 @@
                         <th>Price</th>
                         <th>Status</th>
                         <th>Captured</th>
+                        <th class="w-1"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,15 +28,40 @@
                                     <span class="avatar avatar-md bg-secondary-lt"></span>
                                 {% endif %}
                             </td>
-                            <td><a href="{{ path('admin_item_show', {id: item.id}) }}">{{ item.title ?? 'Untitled item #' ~ item.id }}</a></td>
+                            <td>
+                                <a href="{{ path('admin_item_show', {id: item.id}) }}">{{ item.title ?? ('Untitled item #' ~ item.id) }}</a>
+                                {% if item.assetNumber %}
+                                    <div class="text-secondary small font-monospace">{{ item.assetNumber }}</div>
+                                {% endif %}
+                            </td>
                             <td class="text-secondary">{{ photos|length }} photo(s){{ item.audio ? ' · audio note' : '' }}</td>
-                            <td>{{ item.price is not null ? '$' ~ item.price : '—' }}</td>
+                            {# Nothing in the loan closet is for sale, so an empty price column
+                               there is the absence of a question rather than a missing answer. #}
+                            <td>
+                                {% if item.profile.wantsPrice() %}
+                                    {{ item.price is not null ? '$' ~ item.price : '—' }}
+                                {% else %}
+                                    <span class="text-secondary" title="{{ item.profile.label() }}">n/a</span>
+                                {% endif %}
+                            </td>
                             <td><span class="badge bg-blue-lt">{{ item.marking }}</span></td>
                             <td class="text-secondary">{{ item.createdAt|date('M j, g:ia') }}</td>
+                            <td>
+                                {# The whole point of this screen is to work through a stack of
+                                   items, so the action lives on the row. Reaching it used to
+                                   mean opening each item in turn. #}
+                                {% if depotConfigured %}
+                                    <form method="post" action="{{ path('admin_item_print', {id: item.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('item_print_' ~ item.id) }}">
+                                        <input type="hidden" name="redirect" value="index">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Print</button>
+                                    </form>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-secondary py-4">No items captured yet — go take some photos in the mobile app.</td>
+                            <td colspan="7" class="text-center text-secondary py-4">No items captured yet — go take some photos in the mobile app.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
