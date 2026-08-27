@@ -1,5 +1,15 @@
 {% extends '@SurvosTabler/layout/base.html.twig' %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {# Turbo Drive keeps a snapshot of every page and paints it instantly on a revisit,
+       before the network response lands. An admin record shows live workflow state --
+       marking, price, whether a label printed -- so a stale preview reads as the page
+       simply being out of date, which is exactly what scanning a label and seeing
+       yesterday's state looks like. Records are cheap to fetch; previews are not worth it. #}
+    <meta name="turbo-cache-control" content="no-preview">
+{% endblock %}
+
 {% block javascripts %}
     {{ importmap('admin') }}
 {% endblock %}

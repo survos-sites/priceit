@@ -39,6 +39,13 @@ pwa:
                 enabled: true
             image_cache:
                 enabled: true
+                # NOTE: max_entries and max_age are accepted here and then ignored --
+                # ImageCache::getCacheStrategies() reads cacheName and never attaches an
+                # ExpirationPlugin, unlike asset_cache and font_cache which do. So this cache
+                # is CacheFirst and unbounded whatever is configured. Tolerable only because
+                # uploads get a unique filename, so an image URL's content never changes and
+                # the cost is disk rather than staleness. Setting the keys here would read as
+                # a bound that does not exist.
             font_cache:
                 enabled: true
             # Cache only the capture shell. Caching every navigation made admin record pages
