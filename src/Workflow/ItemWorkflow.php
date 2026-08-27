@@ -114,10 +114,6 @@ final readonly class ItemWorkflow
         $item = $event->getSubject();
         \assert($item instanceof Item);
 
-        // Built from config, not the router: this runs in a worker with no
-        // request, so there is no host to infer.
-        $qr = rtrim($this->publicUrl, '/').'/admin/items/'.$item->getId();
-
         if ($item->getProfile()->assignsAssetNumber()) {
             // Minted before the label is built, so the number on the sticker exists before it
             // is printed. Once assigned it never changes, so a reprint reproduces the same
@@ -125,6 +121,14 @@ final readonly class ItemWorkflow
             $item->assignAssetNumber();
             $this->em->flush();
         }
+
+        // Built from config, not the router: this runs in a worker with no request, so there
+        // is no host to infer. A loan-closet code is keyed by the asset number printed beside
+        // it; an auction item has no durable key of its own, so it falls back to the id.
+        $base = rtrim($this->publicUrl, '/');
+        $qr = null !== $item->getAssetNumber()
+            ? $base.'/e/'.$item->getAssetNumber()
+            : $base.'/admin/items/'.$item->getId();
 
         $result = $this->depot->printLabel($item, $qr);
 

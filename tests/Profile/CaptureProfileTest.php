@@ -54,15 +54,14 @@ final class CaptureProfileTest extends TestCase
     {
         $zpl = (new PriceLabelService())->buildZpl(
             $this->item(CaptureProfile::MedicalEquipment),
-            'https://example.test/admin/items/142',
+            'https://example.test/e/LC-00142',
         );
 
-        // Printed digits and scanned code must be the same string, or a volunteer reading the
-        // label aloud and a phone scanning it would disagree about which item this is.
+        // The scanned URL has to end in the same asset number printed beside it, or a phone
+        // and a volunteer reading the label aloud would disagree about which item this is.
         self::assertStringContainsString('^FDLC-00142^FS', $zpl);
-        self::assertStringContainsString('^FDQA,LC-00142^FS', $zpl);
+        self::assertStringContainsString('^FDQA,https://example.test/e/LC-00142^FS', $zpl);
         self::assertStringNotContainsString('$', $zpl, 'nothing in the closet is for sale');
-        self::assertStringNotContainsString('example.test', $zpl, 'the code is the key, not a URL');
     }
 
     public function testAnAssetNumberIsMintedOnceAndNeverChanges(): void

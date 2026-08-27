@@ -79,11 +79,12 @@ final class PriceLabelService
     {
         $assetNumber = $item->getAssetNumber() ?? '';
 
-        // The code encodes the asset number itself, not a URL: it is the natural key of the
-        // Equipment record in Quickbase, so a scan and a person reading the label aloud produce
-        // the same string. A code that resolved to something the printed digits did not match
-        // would be worse than no code at all.
-        $code = $assetNumber;
+        // The code is a URL ending in the asset number, so scanning it with a phone camera
+        // opens the item rather than showing a string nobody can act on -- and the key is
+        // still right there in the URL, matching the digits printed beside it and the record
+        // in Quickbase. A code resolving to something the printed digits did not match would
+        // be worse than no code at all.
+        $code = $qrValue ?? $assetNumber;
 
         $lines = [
             '^XA',

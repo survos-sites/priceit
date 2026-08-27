@@ -18,6 +18,11 @@ class ItemRepository extends ServiceEntityRepository
         parent::__construct($registry, Item::class);
     }
 
+    public function findOneByAssetNumber(string $assetNumber): ?Item
+    {
+        return $this->findOneBy(['assetNumber' => $assetNumber]);
+    }
+
     public function findOneByClientId(string $clientId): ?Item
     {
         return $this->findOneBy(['clientId' => $clientId]);
