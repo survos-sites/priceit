@@ -201,5 +201,18 @@ final class ClaimMapperTest extends TestCase
             'a caller must not care which source produced the fields',
         );
     }
+
+    public function testWashingtonDcIsNotWashingtonState(): void
+    {
+        // Real value from marac-0005. Walking right, "D.C." is not in the state
+        // table and "Washington" is — so without an alias this tagged a DC
+        // postcard for Seattle buyers.
+        $out = (new ClaimMapper())->mapMetadata(['dcterms:spatial' => ['Washington, D.C.', 'Salem, Oregon']]);
+
+        self::assertSame('District of Columbia', $out['state']);
+        self::assertSame('DC', $out['stateCode']);
+        self::assertSame('Washington', $out['city']);
+        self::assertNotContains('Oregon', $out['tags'], 'Salem is where it was posted to');
+    }
 }
 

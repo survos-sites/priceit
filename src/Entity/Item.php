@@ -131,6 +131,24 @@ class Item
     #[Groups(['item:read'])]
     private array $marketplaceListings = [];
 
+    /**
+     * Provider-neutral facets describing the item: tags, place, materials, and the
+     * era/authorship pair Etsy calls when_made/who_made.
+     *
+     * These come from whoever read the item -- today, ssai's synthesis by way of
+     * ClaimMapper -- and are kept verbatim rather than folded into the description,
+     * because a marketplace wants them as structured fields. Country/state/city
+     * tags in particular are how postcard buyers actually browse.
+     *
+     * Untyped on purpose: what a marketplace accepts is its business, and pinning a
+     * schema here would mean a migration every time one adds a field.
+     *
+     * @var array<string, string|list<string>>
+     */
+    #[ORM\Column(options: ['default' => '{}'])]
+    #[Groups(['item:read'])]
+    private array $attributes = [];
+
     /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['item:read'])]
@@ -392,5 +410,27 @@ class Item
         }
 
         return null;
+    }
+
+    /** @return array<string, string|list<string>> */
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+
+    /** @param array<string, string|list<string>> $attributes */
+    public function setAttributes(array $attributes): self
+    {
+        $this->attributes = $attributes;
+
+        return $this;
+    }
+
+    /** @return list<string> */
+    public function getTags(): array
+    {
+        $tags = $this->attributes['tags'] ?? [];
+
+        return is_array($tags) ? array_values(array_filter($tags, 'is_string')) : [];
     }
 }

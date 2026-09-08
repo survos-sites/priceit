@@ -16,8 +16,10 @@ use Survos\MarketplaceContracts\Model\ListingViolation;
 use Survos\MarketplaceContracts\Model\Money;
 use Survos\MarketplaceContracts\Model\PublishedListing;
 use App\Repository\ItemRepository;
+use Survos\MarketplaceContracts\Contract\ListingRemoverInterface;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -61,6 +63,7 @@ final class MarketplaceListingPublisher
         SymfonyStyle $io,
         #[Argument('Connection name')] string $connection,
         #[Argument('Item id')] int $itemId,
+        #[Option('Category / taxonomy id, skipping local matching')] ?string $category = null,
     ): int {
         $item = $this->items?->find($itemId);
         if (null === $item) {
@@ -92,7 +95,7 @@ final class MarketplaceListingPublisher
         $io->section('Category candidates');
         $io->table(['id', 'name', 'score', 'path'], $rows);
 
-        $draft = $this->draft($item, $connection);
+        $draft = $this->draft($item, $connection, $category);
         $io->section(sprintf('Draft (category %s)', $draft->categoryId ?? 'NONE'));
         $io->definitionList(
             ['title' => $draft->title],
@@ -119,6 +122,14 @@ final class MarketplaceListingPublisher
         SymfonyStyle $io,
         #[Argument('Connection name')] string $connection,
         #[Argument('Item id')] int $itemId,
+        /**
+         * Etsy has no category-suggestion endpoint, so the adapter scores word
+         * overlap against the taxonomy tree locally — and a title like "Cockatoo.
+         * Parrot Jungle, Miami, Florida" shares no words with any node name.
+         * Passing the id is both the escape hatch and, for a known category like
+         * postcards, simply the right answer.
+         */
+        #[Option('Category / taxonomy id, skipping local matching')] ?string $category = null,
     ): int {
         $item = $this->items?->find($itemId);
         if (null === $item) {
@@ -128,7 +139,7 @@ final class MarketplaceListingPublisher
         }
 
         try {
-            $listing = $this->publish($item, $connection);
+            $listing = $this->publish($item, $connection, $category);
         } catch (\Throwable $e) {
             $io->error($e->getMessage());
 
@@ -249,9 +260,21 @@ final class MarketplaceListingPublisher
                 $this->imageUrls($item),
             ),
             locale: $this->localeFor($connection),
+            attributes: $item->getAttributes(),
         );
 
-        $categoryId ??= $adapter->suggestCategories($draft->title)[0]->categoryId ?? null;
+        // Etsy publishes no category-suggestion endpoint, so its adapter scores word
+        // overlap against the taxonomy locally -- and a title like "Cockatoo. Parrot
+        // Jungle, Miami, Florida" shares no word with any node name. The item type
+        // ("postcard") is what actually names the category, so try it first and keep
+        // the title as the fallback.
+        if (null === $categoryId) {
+            $type = $item->getAttributes()['type'] ?? null;
+            $categoryId = (is_string($type) && '' !== $type
+                    ? $adapter->suggestCategories($type)[0]->categoryId ?? null
+                    : null)
+                ?? $adapter->suggestCategories($draft->title)[0]->categoryId ?? null;
+        }
 
         return null !== $categoryId ? $draft->withCategoryId($categoryId) : $draft;
     }
@@ -294,12 +317,65 @@ final class MarketplaceListingPublisher
         return $listing;
     }
 
-    public function withdraw(Item $item, string $connection): void
+    #[AsCommand('marketplace:withdraw', 'Stop selling a listed item, or destroy the listing outright')]
+    public function withdrawCommand(
+        SymfonyStyle $io,
+        #[Argument('Connection name')] string $connection,
+        #[Argument('Item id')] int $itemId,
+        /**
+         * withdraw() is recoverable everywhere it exists; delete() is not, and takes
+         * the listing's views and favourites with it. Reach for it only on a listing
+         * that should never have existed -- a draft published from bad data, say.
+         */
+        #[Option('Destroy the listing permanently instead of deactivating it')] bool $delete = false,
+    ): int {
+        $item = $this->items?->find($itemId);
+        if (null === $item) {
+            $io->error(sprintf('No item %d.', $itemId));
+
+            return Command::FAILURE;
+        }
+
+        $externalId = $item->getListingExternalId($connection);
+        if (null === $externalId) {
+            $io->warning(sprintf('Item %d is not listed for "%s". Nothing to do.', $itemId, $connection));
+
+            return Command::SUCCESS;
+        }
+
+        try {
+            $this->withdraw($item, $connection, $delete);
+        } catch (\Throwable $e) {
+            $io->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $io->success(sprintf('%s %s on %s.', $delete ? 'Deleted' : 'Deactivated', $externalId, $connection));
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @param bool $delete destroy the listing rather than deactivating it; only
+     *                     possible where the adapter implements ListingRemoverInterface
+     */
+    public function withdraw(Item $item, string $connection, bool $delete = false): void
     {
         $externalId = $item->getListingExternalId($connection)
             ?? throw new \LogicException(sprintf('Item %d is not listed for "%s".', (int) $item->getId(), $connection));
 
-        $this->adapter($connection)->withdraw($externalId);
+        $adapter = $this->adapter($connection);
+
+        if ($delete) {
+            if (!$adapter instanceof ListingRemoverInterface) {
+                throw new \LogicException(sprintf('"%s" cannot delete listings; withdraw instead.', $connection));
+            }
+            $adapter->delete($externalId);
+        } else {
+            $adapter->withdraw($externalId);
+        }
+
         $item->forgetListing($connection);
         $this->em->flush();
     }

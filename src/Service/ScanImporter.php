@@ -9,6 +9,7 @@ use App\Entity\Media;
 use App\Entity\MediaKind;
 use App\Profile\CaptureProfile;
 use App\Repository\ItemRepository;
+use App\Service\ClaimMapper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -40,6 +41,7 @@ final readonly class ScanImporter
         private HttpClientInterface $httpClient,
         private EntityManagerInterface $em,
         private ItemRepository $items,
+        private ClaimMapper $claims,
         #[Autowire('%env(default::SCANSTATION_BASE_URL)%')]
         private ?string $baseUrl = null,
     ) {
@@ -54,6 +56,7 @@ final readonly class ScanImporter
         // NOT --profile: Symfony's console already owns that for the profiler.
         #[Option('Capture profile for imported items: garage_sale, resale, medical')] string $captureProfileCode = 'resale',
         #[Option('Maximum items to import')] int $limit = 50,
+        #[Option('Asking price for imported items, in USD. A placeholder for Dave to revise — ssai does not estimate value yet, and priceit deliberately does not run its own AI over images ssai has already read.')] string $price = '9.99',
         #[Option('Show what would happen, change nothing')] bool $dryRun = false,
         #[Option('Base URL, overriding SCANSTATION_BASE_URL')] ?string $base = null,
     ): int {
@@ -72,20 +75,27 @@ final readonly class ScanImporter
             return Command::FAILURE;
         }
 
-        // tenantId as a query parameter, not a subdomain: ssai already filters on it
-        // and a per-tenant host would need DNS and routing for no gain here.
+        // tenantId is a query parameter, not a subdomain — ssai filters on it and a
+        // per-tenant host would need DNS for no gain. It is optional because an
+        // intake code already implies its tenant, and passing both can contradict.
         $query = array_filter([
-            'tenantId' => $tenantId,
+            'tenantId' => 'all' === $tenantId ? null : $tenantId,
             'intake' => $intake,
             'marking' => $marking,
             'itemsPerPage' => $limit,
         ], static fn (mixed $v): bool => null !== $v && '' !== $v);
 
-        $io->comment(sprintf('GET %s/api/items.json?%s', $base, http_build_query($query)));
+        $io->comment(sprintf('GET %s/api/items?%s', $base, http_build_query($query)));
 
         try {
+            // No .json suffix: API Platform serves this by content negotiation and
+            // 404s the extension.
             $payload = $this->httpClient
-                ->request('GET', $base . '/api/items.json', ['query' => $query, 'timeout' => 30])
+                ->request('GET', $base . '/api/items', [
+                    'query' => $query,
+                    'headers' => ['Accept' => 'application/ld+json'],
+                    'timeout' => 30,
+                ])
                 ->toArray();
         } catch (\Throwable $e) {
             $io->error($e->getMessage());
@@ -117,12 +127,30 @@ final readonly class ScanImporter
                 continue;
             }
 
+            // Not yet uploaded means not yet listable, so leave it in ssai rather
+            // than importing something that can only sit in the review screen.
+            if (!$this->isUploaded($remote)) {
+                ++$skipped;
+                $rows[] = [$remoteId, $this->titleFor($remote) ?? '—', 0, 'skipped: images not on S3 yet'];
+
+                continue;
+            }
+
             $images = $this->imageUrlsFor($remote, $base);
             if ([] === $images) {
-                // An item with no reachable image cannot be listed, and importing it
-                // would just fill the review screen with things that can never go out.
                 ++$skipped;
-                $rows[] = [$remoteId, $remote['title'] ?? '—', 0, 'skipped: no images'];
+                $rows[] = [$remoteId, $this->titleFor($remote) ?? '—', 0, 'skipped: no usable image URL'];
+
+                continue;
+            }
+
+            // ssai's own item-level synthesis. Nothing here re-reads the pictures.
+            $metadata = is_array($remote['metadata'] ?? null) ? $remote['metadata'] : [];
+            $mapped = [] !== $metadata ? $this->claims->mapMetadata($metadata) : null;
+
+            if (null === $mapped) {
+                ++$skipped;
+                $rows[] = [$remoteId, $this->titleFor($remote) ?? '—', count($images), 'skipped: AI synthesis has not run'];
 
                 continue;
             }
@@ -132,14 +160,26 @@ final readonly class ScanImporter
             $isNew = null === $item;
 
             if ($dryRun) {
-                $rows[] = [$remoteId, $remote['title'] ?? '—', count($images), $isNew ? 'would create' : 'would update'];
+                $rows[] = [
+                    $remoteId,
+                    mb_substr((string) ($mapped['title'] ?? '—'), 0, 38),
+                    count($images),
+                    ($isNew ? 'would create' : 'would update') . ($mapped['state'] ? ' · ' . $mapped['state'] : ''),
+                ];
                 $isNew ? ++$created : ++$updated;
 
                 continue;
             }
 
             $item ??= new Item($clientId, $captureProfile);
-            $item->setTitle($this->titleFor($remote));
+            $item->setTitle($mapped['title'] ?? $this->titleFor($remote));
+            $item->setDescription($this->descriptionFor($mapped));
+            // A placeholder. ssai does not estimate value yet, and everything here
+            // is created as a DRAFT, so Dave prices it before anything goes live.
+            if (null === $item->getPrice()) {
+                $item->setPrice($price);
+            }
+            $item->setAttributes($this->attributesFrom($mapped));
 
             $existing = [];
             foreach ($item->getMedia() as $media) {
@@ -161,7 +201,12 @@ final readonly class ScanImporter
             }
 
             $this->em->persist($item);
-            $rows[] = [$remoteId, $item->getTitle() ?? '—', count($images), $isNew ? 'created' : 'updated'];
+            $rows[] = [
+                $remoteId,
+                mb_substr((string) $item->getTitle(), 0, 38),
+                count($images),
+                ($isNew ? 'created' : 'updated') . ($mapped['state'] ? ' · ' . $mapped['state'] : ''),
+            ];
             $isNew ? ++$created : ++$updated;
         }
 
@@ -201,7 +246,19 @@ final readonly class ScanImporter
                 continue;
             }
 
-            foreach (['url', 'previewUrl', 'renditionUrl', 'contentUrl'] as $key) {
+            // archiveUrl FIRST: ssai's `archive` imgproxy preset, which is the same
+            // pixels as the S3 derivative (2560x1668) re-encoded as webp — 513 KB
+            // against 833 KB, measured. Etsy wants BYTES rather than a URL, so the
+            // adapter pays for that transfer twice; eBay and Mercado Libre take the
+            // URL and we pay nothing. Etsy accepts webp and transcodes it itself.
+            //
+            // s3Url next, and it stays the fallback that matters: it is the durable
+            // one, written once mediary's TRANSITION_UPLOAD has run, and it works
+            // whether or not imgproxy is reachable. largeUrl often points at an
+            // imgproxy running on whichever laptop did the scanning — those resolve
+            // while that machine is awake and 530 the rest of the time, which is not
+            // something to hand a marketplace.
+            foreach (['archiveUrl', 's3Url', 'largeUrl', 'originalUrl', 'previewUrl'] as $key) {
                 $candidate = $image[$key] ?? null;
                 if (!is_string($candidate) || '' === $candidate) {
                     continue;
@@ -222,6 +279,53 @@ final readonly class ScanImporter
         return array_values(array_unique($urls));
     }
 
+    /**
+     * Whether every image is on durable storage.
+     *
+     * An item whose pictures live on a laptop's imgproxy can be imported and then
+     * never listed, so it is better not to import it: the review screen fills with
+     * things that cannot go out, and the reason is invisible.
+     *
+     * @param array<string, mixed> $remote
+     */
+    private function isUploaded(array $remote): bool
+    {
+        $images = (array) ($remote['images'] ?? []);
+
+        if ([] === $images) {
+            return false;
+        }
+
+        foreach ($images as $image) {
+            if (!is_array($image) || !is_string($image['s3Url'] ?? null) || '' === $image['s3Url']) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The listing description.
+     *
+     * ssai's description already covers both sides of the postcard. The synthesis
+     * notes and the place are appended because a buyer scanning results wants the
+     * where before the prose, and Etsy shows the first line hardest.
+     *
+     * @param array<string, mixed> $mapped
+     */
+    private function descriptionFor(array $mapped): ?string
+    {
+        $parts = array_filter([
+            $mapped['description'] ?? null,
+            $mapped['synthesisNotes'] ?? null,
+            null !== ($mapped['place'] ?? null) ? 'Location: ' . $mapped['place'] : null,
+            null !== ($mapped['date'] ?? null) ? 'Estimated date: ' . $mapped['date'] : null,
+        ], static fn (mixed $p): bool => is_string($p) && '' !== trim($p));
+
+        return [] === $parts ? null : implode("\n\n", $parts);
+    }
+
     /** @param array<string, mixed> $remote */
     private function titleFor(array $remote): ?string
     {
@@ -233,5 +337,43 @@ final readonly class ScanImporter
         }
 
         return null;
+    }
+
+    /**
+     * The structured half of the mapping. The description already reads well for a
+     * human; this is the part a marketplace indexes on, so it is stored as fields
+     * rather than prose.
+     *
+     * Place is flattened into tags because that is how buyers browse -- someone
+     * shopping for a New Hampshire postcard searches the state, not the hotel. The
+     * mapper has already put the depicted place first, so the ordering here is the
+     * ordering a marketplace will truncate to its own tag limit.
+     *
+     * @param array<string, mixed> $mapped
+     *
+     * @return array<string, string|list<string>>
+     */
+    private function attributesFrom(array $mapped): array
+    {
+        $attributes = [];
+
+        $tags = $mapped['tags'] ?? [];
+        if (is_array($tags) && [] !== $tags) {
+            $attributes['tags'] = array_values(array_filter($tags, 'is_string'));
+        }
+
+        foreach (['place', 'landmark', 'city', 'state', 'country', 'type', 'date'] as $key) {
+            if (is_string($mapped[$key] ?? null) && '' !== $mapped[$key]) {
+                $attributes[$key] = $mapped[$key];
+            }
+        }
+
+        // Etsy's own vocabulary, and the only two fields it demands on every
+        // listing. Mapping the era here means the adapter never has to guess.
+        if (is_string($mapped['whenMade'] ?? null)) {
+            $attributes['when_made'] = $mapped['whenMade'];
+        }
+
+        return $attributes;
     }
 }

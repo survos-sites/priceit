@@ -41,6 +41,18 @@ final readonly class ClaimMapper
     ];
 
     /**
+     * Ways a place says "Washington DC" without saying "District of Columbia".
+     *
+     * Checked BEFORE the state table, because "Washington, D.C." otherwise walks
+     * right, fails to recognise "D.C.", and matches "Washington" as the state —
+     * putting a DC postcard in front of Seattle buyers. Real value from
+     * marac-0005.
+     *
+     * @var list<string>
+     */
+    private const DC_ALIASES = ['d.c.', 'dc', 'd c', 'washington d.c.', 'washington dc'];
+
+    /**
      * Collapse an item's claims into listing fields.
      *
      * @param list<array<string, mixed>> $claims
@@ -173,6 +185,23 @@ final readonly class ClaimMapper
         // state wins. The part immediately BEFORE it is the city — "Parrot Jungle,
         // Miami, Florida" is an attraction in Miami, not a city called Parrot
         // Jungle, and taking the first part would have got that backwards.
+        // DC first: it is spelled in ways the state table does not hold, and one of
+        // those spellings collides with a real state.
+        foreach ($parts as $index => $part) {
+            $key = mb_strtolower(trim($part));
+
+            if (in_array($key, self::DC_ALIASES, true)) {
+                return [
+                    'place' => $raw,
+                    'landmark' => $index >= 1 ? $parts[0] : null,
+                    'city' => 'Washington',
+                    'state' => 'District of Columbia',
+                    'stateCode' => 'DC',
+                    'country' => 'United States',
+                ];
+            }
+        }
+
         foreach (array_reverse($parts, true) as $index => $part) {
             $key = mb_strtolower($part);
 
