@@ -7,6 +7,7 @@ namespace App\Controller;
 use Survos\Etsy\Auth\EtsyCredentials;
 use Survos\Etsy\Exception\EtsyException;
 use Survos\MarketplaceContracts\Contract\DraftPublisherInterface;
+use Survos\MarketplaceContracts\Contract\ListingRemoverInterface;
 use Survos\MarketplaceContracts\Exception\MarketplaceException;
 use Survos\Etsy\Generated\ShopApi;
 use Survos\Etsy\Generated\ShopListingApi;
@@ -77,6 +78,63 @@ final class EtsyShopController extends AbstractController
         }
 
         return $this->redirectToRoute('etsy_shop', ['connection' => $connection, 'state' => 'draft']);
+    }
+
+    /**
+     * Take a listing down without destroying it.
+     *
+     * What a seller means by "I sold that elsewhere": the listing, its views and
+     * its favourites survive and it can be relisted. Reversible from Etsy's own
+     * UI, which is why it does not ask twice.
+     */
+    #[Route('/deactivate/{connection}/{listingId}', name: 'deactivate', methods: ['POST'])]
+    public function deactivate(Request $request, string $connection, string $listingId): Response
+    {
+        if (!$this->isCsrfTokenValid('etsy_deactivate_' . $listingId, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        try {
+            $this->marketplace?->adapter($connection)->withdraw($listingId);
+            $this->addFlash('success', sprintf('Listing %s deactivated — it can be relisted later.', $listingId));
+        } catch (MarketplaceException|EtsyException $e) {
+            $this->addFlash('danger', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('etsy_shop', ['connection' => $connection, 'state' => $request->request->getString('back') ?: null]);
+    }
+
+    /**
+     * Destroy the listing.
+     *
+     * Not the same as deactivating, and not reversible: the views, favourites and
+     * the fee already paid go with it. Offered because a draft that should never
+     * have existed is worth removing outright, but deliberately the less prominent
+     * of the two.
+     */
+    #[Route('/delete/{connection}/{listingId}', name: 'delete', methods: ['POST'])]
+    public function delete(Request $request, string $connection, string $listingId): Response
+    {
+        if (!$this->isCsrfTokenValid('etsy_delete_' . $listingId, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $adapter = $this->marketplace?->adapter($connection);
+
+        if (!$adapter instanceof ListingRemoverInterface) {
+            $this->addFlash('danger', sprintf('%s cannot delete listings.', $connection));
+
+            return $this->redirectToRoute('etsy_shop', ['connection' => $connection]);
+        }
+
+        try {
+            $adapter->delete($listingId);
+            $this->addFlash('success', sprintf('Listing %s deleted permanently.', $listingId));
+        } catch (MarketplaceException|EtsyException $e) {
+            $this->addFlash('danger', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('etsy_shop', ['connection' => $connection, 'state' => $request->request->getString('back') ?: null]);
     }
 
     #[Route('/shop/{connection}', name: 'shop', defaults: ['connection' => 'dave_etsy'])]

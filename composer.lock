@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "598680ef7a0f866d465a53283f5108ba",
+    "content-hash": "f46c6497f45270f1fa19ae0238d819f7",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6374,16 +6374,16 @@
         },
         {
             "name": "survos/marketplace-bundle",
-            "version": "2.27.16",
+            "version": "2.27.17",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/marketplace-bundle.git",
-                "reference": "f25165098acfe00a7fc3b174a04a19f49f54490e"
+                "reference": "50084d4e1934f938546e87fd2888c6d1a28ad85d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/f25165098acfe00a7fc3b174a04a19f49f54490e",
-                "reference": "f25165098acfe00a7fc3b174a04a19f49f54490e",
+                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/50084d4e1934f938546e87fd2888c6d1a28ad85d",
+                "reference": "50084d4e1934f938546e87fd2888c6d1a28ad85d",
                 "shasum": ""
             },
             "require": {
@@ -6440,7 +6440,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/marketplace-bundle/issues",
-                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.16"
+                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.17"
             },
             "funding": [
                 {
@@ -6448,20 +6448,20 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-08T21:02:48+00:00"
+            "time": "2026-09-08T21:39:53+00:00"
         },
         {
             "name": "survos/marketplace-contracts",
-            "version": "2.27.15",
+            "version": "2.27.17",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/marketplace-contracts.git",
-                "reference": "1aa62ba1e7c2d0d12daaa00af15e13ad67b2c340"
+                "reference": "d34e3ea00dd10476665b0db64d7d8ea69f751717"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/marketplace-contracts/zipball/1aa62ba1e7c2d0d12daaa00af15e13ad67b2c340",
-                "reference": "1aa62ba1e7c2d0d12daaa00af15e13ad67b2c340",
+                "url": "https://api.github.com/repos/survos/marketplace-contracts/zipball/d34e3ea00dd10476665b0db64d7d8ea69f751717",
+                "reference": "d34e3ea00dd10476665b0db64d7d8ea69f751717",
                 "shasum": ""
             },
             "require": {
@@ -6498,7 +6498,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/marketplace-contracts/issues",
-                "source": "https://github.com/survos/marketplace-contracts/tree/2.27.15"
+                "source": "https://github.com/survos/marketplace-contracts/tree/2.27.17"
             },
             "funding": [
                 {
@@ -6506,7 +6506,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-08T21:00:46+00:00"
+            "time": "2026-09-08T21:39:44+00:00"
         },
         {
             "name": "survos/mercadolibre-php",

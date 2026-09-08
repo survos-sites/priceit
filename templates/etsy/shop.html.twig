@@ -118,9 +118,41 @@
                                       action="{{ path('etsy_publish', {connection: connection, listingId: listing.listing_id}) }}"
                                       onsubmit="return confirm('Publish “{{ listing.title|e('js') }}” to Etsy? This makes it visible to buyers and incurs Etsy\'s listing fee.')">
                                     <input type="hidden" name="_token" value="{{ csrf_token('etsy_publish_' ~ listing.listing_id) }}">
-                                    <button type="submit" class="btn btn-sm btn-success">Publish</button>
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        {{ ux_icon('tabler:check', {width: 16, height: 16}) }} Publish
+                                    </button>
                                 </form>
                             {% endif %}
+
+                            {% if listing.state == 'active' %}
+                                {# For "I sold it elsewhere". Reversible — the listing,
+                                   its views and its favourites survive and it can be
+                                   relisted — so it does not interrogate the seller. #}
+                                <form method="post" class="d-inline"
+                                      action="{{ path('etsy_deactivate', {connection: connection, listingId: listing.listing_id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('etsy_deactivate_' ~ listing.listing_id) }}">
+                                    <input type="hidden" name="back" value="{{ state }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning"
+                                            title="Take it down — reversible, keeps views and favourites">
+                                        {{ ux_icon('tabler:eye-off', {width: 16, height: 16}) }} Deactivate
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {# Deliberately last and quiet. Deleting is NOT deactivating:
+                               it destroys the views, the favourites and the fee already
+                               paid, and cannot be undone. Two confirms, and the title is
+                               in the second one so a mis-click on the wrong row fails. #}
+                            <form method="post" class="d-inline"
+                                  action="{{ path('etsy_delete', {connection: connection, listingId: listing.listing_id}) }}"
+                                  onsubmit="return confirm('Delete “{{ listing.title|e('js') }}” permanently?\n\nThis is NOT the same as deactivating — views, favourites and the listing fee are gone for good. If it sold elsewhere, deactivate instead.') && confirm('Last chance. Permanently delete listing {{ listing.listing_id }}?')">
+                                <input type="hidden" name="_token" value="{{ csrf_token('etsy_delete_' ~ listing.listing_id) }}">
+                                <input type="hidden" name="back" value="{{ state }}">
+                                <button type="submit" class="btn btn-sm btn-link text-danger px-1"
+                                        title="Delete permanently — cannot be undone">
+                                    {{ ux_icon('tabler:trash', {width: 16, height: 16}) }}
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 {% else %}
