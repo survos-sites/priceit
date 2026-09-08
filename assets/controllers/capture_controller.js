@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -65,6 +65,42 @@ export default class extends Controller {
     } catch (err) {
       this._setStatus(`Capture failed: ${err.message}`);
     }
+  }
+
+  /** Opens the native picker. The <input> stays hidden so the button matches the others. */
+  pickFiles() {
+    this.fileInputTarget.click();
+  }
+
+  /**
+   * Photos from the phone's own camera app or its library.
+   *
+   * The in-page <video> capture is framed by whatever getUserMedia hands back, which
+   * is a fixed crop and the wrong aspect for most objects — fine for reading a
+   * barcode, poor for a photo someone will buy from. The native picker gives the
+   * real camera app: correct framing, HDR, flash, and the chance to retake before
+   * committing. It also reaches the library, so a picture taken earlier still counts.
+   *
+   * A File IS a Blob, so nothing downstream changes — thumbnails and the offline
+   * outbox take these unmodified.
+   *
+   * Deliberately no downscaling: eBay and Etsy both want large images (Etsy asks for
+   * 2000px on the long edge), so shrinking here to save upload bytes would degrade
+   * the listing to save a few seconds.
+   */
+  addFiles(event) {
+    const chosen = Array.from(event.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+
+    if (chosen.length === 0) {
+      return;
+    }
+
+    this.photos.push(...chosen);
+    this._renderThumbs();
+    this._setStatus(`Added ${chosen.length} photo${chosen.length === 1 ? '' : 's'}`);
+
+    // Cleared so picking the same file twice in a row still fires a change event.
+    event.target.value = '';
   }
 
   removePhoto(event) {

@@ -12,12 +12,26 @@
             <button type="button" class="button button-fill button-large" data-action="capture#snap">
                 📷 Snap photo
             </button>
+            {# The native picker, not the in-page camera. getUserMedia gives a fixed
+               crop that suits a barcode more than a thing someone will buy; this
+               opens the phone's own camera app (or its library) and hands back a
+               properly framed image. capture="environment" is deliberately absent:
+               without it iOS and Android offer BOTH "take photo" and "choose from
+               library", which is the point. #}
+            <button type="button" class="button button-outline button-large"
+                    data-action="capture#pickFiles">
+                🖼️ Upload photos
+            </button>
             {# Hidden unless the browser can dictate AND there is a connection to
                dictate through — Chrome sends the audio away to recognise it. #}
             <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio" hidden>
                 🎙️ Say something about it
             </button>
         </div>
+        <input type="file" accept="image/*" multiple hidden
+               {{ stimulus_target('capture', 'fileInput') }}
+               data-action="capture#addFiles">
+
         <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
 
         {# One field, whether the words were typed or spoken. Dictation writes
