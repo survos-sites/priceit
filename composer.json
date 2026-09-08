@@ -26,6 +26,7 @@
         "survos/auth-bundle": "^2.24",
         "survos/doc-bundle": "^2.19",
         "survos/ebay-php": "^2.27",
+        "survos/etsy-php": "^2.27",
         "survos/fw-bundle": ">=2.18.18",
         "survos/marketplace-bundle": "^2.27",
         "survos/mercadolibre-php": "^2.27",

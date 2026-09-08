@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b74fe6cb0c067d5464b59d7bb5d3979d",
+    "content-hash": "e8a6bebf90032c0f07a668bc4d9d2023",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6045,6 +6045,69 @@
             "time": "2026-09-08T16:46:10+00:00"
         },
         {
+            "name": "survos/etsy-php",
+            "version": "2.27.13",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/etsy-php.git",
+                "reference": "9a06d073b184e2fd61aa6c22bf3076d4a79a65bf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/etsy-php/zipball/9a06d073b184e2fd61aa6c22bf3076d4a79a65bf",
+                "reference": "9a06d073b184e2fd61aa6c22bf3076d4a79a65bf",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.5",
+                "symfony/http-client-contracts": "^3.7"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.0",
+                "symfony/http-client": "^8.1"
+            },
+            "suggest": {
+                "survos/marketplace-contracts": "Provider-neutral listing models, if you want to target several marketplaces through one interface.",
+                "symfony/http-client": "A PSR-compatible HttpClientInterface implementation; any implementation will do."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "2.27.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Survos\\Etsy\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Etsy Open API v3 client for PHP, generated from Etsy's own OpenAPI 3 contract. Framework-agnostic.",
+            "keywords": [
+                "api",
+                "client",
+                "etsy",
+                "listings",
+                "marketplace",
+                "openapi"
+            ],
+            "support": {
+                "issues": "https://github.com/survos/etsy-php/issues",
+                "source": "https://github.com/survos/etsy-php/tree/2.27.13"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-09-08T19:12:33+00:00"
+        },
+        {
             "name": "survos/field-bundle",
             "version": "2.24.37",
             "source": {
@@ -6311,16 +6374,16 @@
         },
         {
             "name": "survos/marketplace-bundle",
-            "version": "2.27.11",
+            "version": "2.27.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/marketplace-bundle.git",
-                "reference": "e1ed601d26574e06387142e2d5c1f91bc727ac7e"
+                "reference": "c8a7b8419f7938662e9f3691f3672a235c9665d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/e1ed601d26574e06387142e2d5c1f91bc727ac7e",
-                "reference": "e1ed601d26574e06387142e2d5c1f91bc727ac7e",
+                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/c8a7b8419f7938662e9f3691f3672a235c9665d5",
+                "reference": "c8a7b8419f7938662e9f3691f3672a235c9665d5",
                 "shasum": ""
             },
             "require": {
@@ -6337,11 +6400,13 @@
                 "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^13.0",
                 "survos/ebay-php": "^2.5",
+                "survos/etsy-php": "^2.27",
                 "survos/mercadolibre-php": "^2.5",
                 "symfony/http-client": "^8.1"
             },
             "suggest": {
                 "survos/ebay-php": "Required by EbayAdapter.",
+                "survos/etsy-php": "Required by EtsyAdapter.",
                 "survos/mercadolibre-php": "Required by MercadoLibreAdapter."
             },
             "type": "symfony-bundle",
@@ -6373,7 +6438,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/marketplace-bundle/issues",
-                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.11"
+                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.13"
             },
             "funding": [
                 {
@@ -6381,7 +6446,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-08T17:38:08+00:00"
+            "time": "2026-09-08T19:12:40+00:00"
         },
         {
             "name": "survos/marketplace-contracts",
