@@ -2638,6 +2638,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         sandbox?: bool|Param, // eBay only. Mercado Libre has no sandbox and the adapter refuses this rather than publishing to production. // Default: false
  *         options?: mixed, // Driver options. eBay needs merchant_location_key plus the three business policy ids. // Default: []
  *     }>,
+ *     mercadolibre?: array{ // Mercado Libre application. Created instantly at developers.mercadolibre.com.<tld> -- no review queue, unlike eBay.
+ *         client_id?: scalar|Param|null, // The numeric App ID. // Default: null
+ *         client_secret?: scalar|Param|null, // The Secret Key. // Default: null
+ *         redirect_uri?: scalar|Param|null, // Must match a redirect URI registered on the application EXACTLY -- Mercado Libre compares the whole string. // Default: null
+ *         site?: scalar|Param|null, // Site whose auth host sellers are sent to, e.g. MLM. // Default: "MLM"
+ *     },
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,

@@ -111,11 +111,15 @@ class Item
     private ?\DateTimeImmutable $quickbaseExportedAt = null;
 
     /**
-     * Where this item is listed, keyed by provider: ebay, mercadolibre, ...
+     * Where this item is listed, keyed by CONNECTION name: dave, chijal, marcela.
      *
-     * A map rather than a column per marketplace. The same object can be listed in
-     * more than one place, the set of marketplaces is configuration rather than
-     * schema, and adding the third one should not be a migration.
+     * Connection, not provider. Two sellers can share one marketplace -- chijal and
+     * Marcela are both mercadolibre/MLM -- and keying by provider would make one
+     * seller's listing look like the other's, so listing an item for chijal would
+     * report it as already listed for Marcela.
+     *
+     * A map rather than a column per marketplace: the set of connections is
+     * configuration rather than schema, so adding a seller is not a migration.
      *
      * Each entry is {externalId, url, listedAt}. externalId is whatever handle that
      * provider's own write operations accept -- eBay's OFFER id, not its listing id;
@@ -293,37 +297,37 @@ class Item
     }
 
     /** @return array{externalId: string, url: string|null, listedAt: string}|null */
-    public function getListing(string $provider): ?array
+    public function getListing(string $connection): ?array
     {
-        return $this->marketplaceListings[$provider] ?? null;
+        return $this->marketplaceListings[$connection] ?? null;
     }
 
     /** Re-listing where a listing already exists would create a duplicate, not update one. */
-    public function isListedOn(string $provider): bool
+    public function isListedOn(string $connection): bool
     {
-        return isset($this->marketplaceListings[$provider]);
+        return isset($this->marketplaceListings[$connection]);
     }
 
-    public function getListingUrl(string $provider): ?string
+    public function getListingUrl(string $connection): ?string
     {
-        return $this->marketplaceListings[$provider]['url'] ?? null;
+        return $this->marketplaceListings[$connection]['url'] ?? null;
     }
 
-    public function getListingExternalId(string $provider): ?string
+    public function getListingExternalId(string $connection): ?string
     {
-        return $this->marketplaceListings[$provider]['externalId'] ?? null;
+        return $this->marketplaceListings[$connection]['externalId'] ?? null;
     }
 
-    public function getListedAt(string $provider): ?\DateTimeImmutable
+    public function getListedAt(string $connection): ?\DateTimeImmutable
     {
-        $at = $this->marketplaceListings[$provider]['listedAt'] ?? null;
+        $at = $this->marketplaceListings[$connection]['listedAt'] ?? null;
 
         return \is_string($at) ? new \DateTimeImmutable($at) : null;
     }
 
-    public function recordListing(string $provider, string $externalId, ?string $url = null): static
+    public function recordListing(string $connection, string $externalId, ?string $url = null): static
     {
-        $this->marketplaceListings[$provider] = [
+        $this->marketplaceListings[$connection] = [
             'externalId' => $externalId,
             'url' => $url,
             'listedAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
@@ -332,9 +336,9 @@ class Item
         return $this;
     }
 
-    public function forgetListing(string $provider): static
+    public function forgetListing(string $connection): static
     {
-        unset($this->marketplaceListings[$provider]);
+        unset($this->marketplaceListings[$connection]);
 
         return $this;
     }

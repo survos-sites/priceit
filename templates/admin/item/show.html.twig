@@ -77,7 +77,7 @@
                             {% if target.listing %}
                                 <a href="{{ target.listing.url ?? '#' }}" target="_blank" rel="noopener"
                                    class="btn btn-outline-success">
-                                    View on {{ target.provider }} &nearr;
+                                    View {{ name }} on {{ target.provider }} &nearr;
                                 </a>
                             {% else %}
                                 <form method="post"
@@ -86,7 +86,7 @@
                                     <input type="hidden" name="_token" value="{{ csrf_token('item_list_' ~ name ~ '_' ~ item.id) }}">
                                     <button type="submit" class="btn btn-outline-dark"
                                             {{ target.blockers is empty ? '' : 'disabled' }}>
-                                        Post to {{ target.provider }} ({{ target.site }})
+                                        Post as {{ name }} &middot; {{ target.provider }} ({{ target.site }})
                                     </button>
                                 </form>
                             {% endif %}
@@ -96,7 +96,7 @@
                     {% for name, target in marketplaceTargets %}
                         {% if target.listing %}
                             <div class="text-secondary mt-3 small">
-                                Listed on {{ target.provider }}
+                                Listed as {{ name }} on {{ target.provider }}
                                 {{ target.listing.listedAt|date('j M Y, g:ia') }}
                                 (<code>{{ target.listing.externalId }}</code>).
                             </div>
@@ -104,7 +104,7 @@
                             <div class="text-secondary mt-3 small">
                                 {# Say why the button is disabled rather than leaving it a mystery. #}
                                 {% for blocker in target.blockers %}
-                                    <div>Not ready for {{ target.provider }}: {{ blocker }}</div>
+                                    <div>Not ready for {{ name }}: {{ blocker }}</div>
                                 {% endfor %}
                             </div>
                         {% endif %}

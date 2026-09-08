@@ -41,11 +41,10 @@ final class ItemController extends AbstractController
         // unavailable -- an item can be listable on one and not another.
         $targets = [];
         foreach ($marketplace->connections() as $name => $config) {
-            $provider = $config['driver'];
             $targets[$name] = [
-                'provider' => $provider,
+                'provider' => $config['driver'],
                 'site' => $config['site'],
-                'listing' => $item->getListing($provider),
+                'listing' => $item->getListing($name),
                 'blockers' => $marketplace->blockers($item, $name),
             ];
         }

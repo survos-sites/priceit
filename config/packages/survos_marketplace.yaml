@@ -5,6 +5,13 @@ survos_marketplace:
         # eBay's redirect-URI ALIAS from the developer portal, not a URL.
         ru_name: '%env(EBAY_RU_NAME)%'
 
+    mercadolibre:
+        client_id: '%env(MELI_CLIENT_ID)%'
+        client_secret: '%env(MELI_CLIENT_SECRET)%'
+        # Must match a redirect URI registered on the app, character for character.
+        redirect_uri: '%env(MELI_REDIRECT_URI)%'
+        site: MLM
+
     connections:
         # Dave's store. The business policy ids and location key come from his
         # seller account after he authorizes the app -- they are not secrets, but
@@ -29,5 +36,12 @@ survos_marketplace:
         # any seller has authorized anything. Publishing through it will fail
         # loudly until a token provider is wired.
         chijal:
+            driver: mercadolibre
+            site: MLM
+
+        # Marcela — a second Mercado Libre seller on the SAME application. The
+        # client id identifies the software, not the seller; each connection just
+        # holds its own token, in its own file under token_dir.
+        marcela:
             driver: mercadolibre
             site: MLM

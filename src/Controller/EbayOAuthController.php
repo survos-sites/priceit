@@ -26,6 +26,8 @@ final class EbayOAuthController extends AbstractController
     public function __construct(
         #[Autowire('%env(default::EBAY_CONNECTION)%')]
         private readonly ?string $connectionName = null,
+        #[Autowire('%env(EBAY_CLIENT_ID)%')]
+        private readonly string $clientId = '',
         private readonly ?EbayTokenProviderFactory $ebay = null,
     ) {
     }
@@ -92,7 +94,10 @@ final class EbayOAuthController extends AbstractController
 
     private function available(): EbayTokenProviderFactory
     {
-        if (null === $this->ebay || null === $this->connectionName || '' === $this->connectionName) {
+        // Same reason as the Mercado Libre flow: an empty client_id would redirect
+        // the seller to eBay with a request eBay cannot honour.
+        if (null === $this->ebay || '' === $this->clientId
+            || null === $this->connectionName || '' === $this->connectionName) {
             throw $this->createNotFoundException(
                 'eBay is not configured. Set EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, EBAY_RU_NAME and EBAY_CONNECTION.',
             );

@@ -96,8 +96,8 @@ final class MarketplaceListingPublisher
         if (!$item->getProfile()->listsOnEbay()) {
             $blockers[] = sprintf('%s items are not listed for sale.', $item->getProfile()->label());
         }
-        if ($item->isListedOn($provider)) {
-            $blockers[] = sprintf('Already listed on %s. Withdraw it before listing again.', $provider);
+        if ($item->isListedOn($connection)) {
+            $blockers[] = sprintf('Already listed for "%s". Withdraw it before listing again.', $connection);
         }
         if (null === $item->getTitle() || '' === $item->getTitle()) {
             $blockers[] = 'No title.';
@@ -178,7 +178,7 @@ final class MarketplaceListingPublisher
 
         $listing = $this->adapter($connection)->publish($draft);
 
-        $item->recordListing($listing->provider, $listing->externalId, $listing->url);
+        $item->recordListing($connection, $listing->externalId, $listing->url);
         $this->em->flush();
 
         return $listing;
@@ -186,12 +186,11 @@ final class MarketplaceListingPublisher
 
     public function withdraw(Item $item, string $connection): void
     {
-        $provider = $this->providerFor($connection);
-        $externalId = $item->getListingExternalId($provider)
-            ?? throw new \LogicException(sprintf('Item %d is not listed on %s.', (int) $item->getId(), $provider));
+        $externalId = $item->getListingExternalId($connection)
+            ?? throw new \LogicException(sprintf('Item %d is not listed for "%s".', (int) $item->getId(), $connection));
 
         $this->adapter($connection)->withdraw($externalId);
-        $item->forgetListing($provider);
+        $item->forgetListing($connection);
         $this->em->flush();
     }
 

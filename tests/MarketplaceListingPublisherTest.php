@@ -62,16 +62,16 @@ final class MarketplaceListingPublisherTest extends TestCase
     public function testBlockersAreReportedPerMarketplace(): void
     {
         $item = $this->item();
-        $item->recordListing('ebay', 'offer-42', 'https://www.ebay.com/itm/110586523456');
+        $item->recordListing('dave', 'offer-42', 'https://www.ebay.com/itm/110586523456');
 
-        // Listed on eBay, still listable on Mercado Libre -- the same object can
-        // legitimately be on both.
         self::assertContains(
-            'Already listed on ebay. Withdraw it before listing again.',
+            'Already listed for "dave". Withdraw it before listing again.',
             $this->publisher()->blockers($item, 'dave'),
         );
+        // Keyed by connection, not provider: two sellers can share a marketplace, so
+        // one seller's listing must not report the other's item as already listed.
         self::assertNotContains(
-            'Already listed on mercadolibre. Withdraw it before listing again.',
+            'Already listed for "chijal". Withdraw it before listing again.',
             $this->publisher()->blockers($item, 'chijal'),
         );
     }
@@ -101,20 +101,24 @@ final class MarketplaceListingPublisherTest extends TestCase
     {
         $item = $this->item();
 
-        self::assertFalse($item->isListedOn('ebay'));
+        self::assertFalse($item->isListedOn('dave'));
 
-        $item->recordListing('ebay', 'offer-42', 'https://www.ebay.com/itm/110586523456');
-        $item->recordListing('mercadolibre', 'MLM1234567890', 'https://articulo.mercadolibre.com.mx/MLM-1234567890');
+        $item->recordListing('dave', 'offer-42', 'https://www.ebay.com/itm/110586523456');
+        $item->recordListing('chijal', 'MLM1234567890', 'https://articulo.mercadolibre.com.mx/MLM-1234567890');
+        $item->recordListing('marcela', 'MLM9999999999', null);
 
-        self::assertTrue($item->isListedOn('ebay'));
-        self::assertTrue($item->isListedOn('mercadolibre'));
+        self::assertTrue($item->isListedOn('dave'));
+        // chijal and marcela are BOTH mercadolibre/MLM and must stay distinct.
+        self::assertTrue($item->isListedOn('chijal'));
+        self::assertTrue($item->isListedOn('marcela'));
+        self::assertSame('MLM1234567890', $item->getListingExternalId('chijal'));
         // The offer id, not the listing id: it is what eBay's writes accept.
-        self::assertSame('offer-42', $item->getListingExternalId('ebay'));
-        self::assertNotNull($item->getListedAt('ebay'));
+        self::assertSame('offer-42', $item->getListingExternalId('dave'));
+        self::assertNotNull($item->getListedAt('dave'));
 
-        $item->forgetListing('ebay');
-        self::assertFalse($item->isListedOn('ebay'));
-        self::assertTrue($item->isListedOn('mercadolibre'), 'withdrawing one must not touch the other');
+        $item->forgetListing('chijal');
+        self::assertFalse($item->isListedOn('chijal'));
+        self::assertTrue($item->isListedOn('marcela'), 'withdrawing one seller must not touch the other');
     }
 
     public function testUnknownConnectionIsRejected(): void
