@@ -20,3 +20,14 @@ survos_marketplace:
                 fulfillment_policy_id: '%env(default::EBAY_FULFILLMENT_POLICY)%'
                 payment_policy_id: '%env(default::EBAY_PAYMENT_POLICY)%'
                 return_policy_id: '%env(default::EBAY_RETURN_POLICY)%'
+
+        # chijal (Chiapas). Mercado Libre has no US marketplace -- its sites are
+        # Latin American -- so this is for selling in Mexico, not for Dave.
+        #
+        # No credentials here on purpose: category discovery and attribute lookup
+        # are PUBLIC on Mercado Libre, so this connection is usable today, before
+        # any seller has authorized anything. Publishing through it will fail
+        # loudly until a token provider is wired.
+        chijal:
+            driver: mercadolibre
+            site: MLM

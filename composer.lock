@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "759986119e636f8ea8041a34c1dae62c",
+    "content-hash": "9226e736111689d26eed1a828af79186",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6440,6 +6440,70 @@
                 }
             ],
             "time": "2026-09-08T16:46:09+00:00"
+        },
+        {
+            "name": "survos/mercadolibre-php",
+            "version": "2.27.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/survos/mercadolibre-php.git",
+                "reference": "cd4fe8f0f91f35ed75bae1640b609d3b480fcf86"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/survos/mercadolibre-php/zipball/cd4fe8f0f91f35ed75bae1640b609d3b480fcf86",
+                "reference": "cd4fe8f0f91f35ed75bae1640b609d3b480fcf86",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.5",
+                "symfony/http-client-contracts": "^3.7"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.0",
+                "symfony/http-client": "^8.1"
+            },
+            "suggest": {
+                "survos/marketplace-contracts": "Provider-neutral listing models, if you want to target eBay and Mercado Libre through one interface.",
+                "symfony/http-client": "A PSR-compatible HttpClientInterface implementation; any implementation will do."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "2.27.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Survos\\MercadoLibre\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Mercado Libre API client for PHP. Framework-agnostic -- usable from Symfony, WordPress, or plain PHP.",
+            "keywords": [
+                "Meli",
+                "MercadoLibre",
+                "api",
+                "client",
+                "latam",
+                "marketplace",
+                "mercadolivre"
+            ],
+            "support": {
+                "issues": "https://github.com/survos/mercadolibre-php/issues",
+                "source": "https://github.com/survos/mercadolibre-php/tree/2.27.9"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/kbond",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-09-08T16:45:57+00:00"
         },
         {
             "name": "survos/quickbase-bundle",

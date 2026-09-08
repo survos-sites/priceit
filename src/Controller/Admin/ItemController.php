@@ -7,7 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Item;
 use App\Repository\ItemRepository;
 use App\Service\DepotPrintClient;
-use App\Service\EbayListingPublisher;
+use App\Service\MarketplaceListingPublisher;
 use App\Service\PricingSuggestionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -35,34 +35,48 @@ final class ItemController extends AbstractController
         Item $item,
         PricingSuggestionService $pricing,
         DepotPrintClient $depot,
-        EbayListingPublisher $ebay,
+        MarketplaceListingPublisher $marketplace,
     ): Response {
+        // One entry per configured marketplace, each with its own reasons for being
+        // unavailable -- an item can be listable on one and not another.
+        $targets = [];
+        foreach ($marketplace->connections() as $name => $config) {
+            $provider = $config['driver'];
+            $targets[$name] = [
+                'provider' => $provider,
+                'site' => $config['site'],
+                'listing' => $item->getListing($provider),
+                'blockers' => $marketplace->blockers($item, $name),
+            ];
+        }
+
         return $this->render('admin/item/show.html.twig', [
             'item' => $item,
             'aiConfigured' => $pricing->isConfigured(),
             'depotConfigured' => $depot->isConfigured(),
-            'ebayConfigured' => $ebay->isAvailable(),
-            // Shown next to a disabled button, so "why can't I click this" is
-            // answered on the page rather than in the logs.
-            'ebayBlockers' => $ebay->blockers($item),
+            'marketplaceTargets' => $targets,
         ]);
     }
 
     /**
-     * Put the item on eBay.
+     * List the item on one marketplace.
      *
      * Synchronous, unlike the workflow's async `list` transition: someone pressed a
-     * button and is looking at the screen, and "it might appear on eBay shortly" is
-     * a poor answer for an action that publishes something publicly.
+     * button and is watching, and "it might appear shortly" is a poor answer for an
+     * action that publishes something publicly.
      */
-    #[Route('/items/{id}/list-on-ebay', name: 'item_list_ebay', methods: ['POST'])]
-    public function listOnEbay(Item $item, Request $request, EbayListingPublisher $ebay): Response
-    {
-        if (!$this->isCsrfTokenValid('item_list_ebay_'.$item->getId(), (string) $request->request->get('_token'))) {
+    #[Route('/items/{id}/list/{connection}', name: 'item_list_marketplace', methods: ['POST'])]
+    public function listOnMarketplace(
+        Item $item,
+        string $connection,
+        Request $request,
+        MarketplaceListingPublisher $marketplace,
+    ): Response {
+        if (!$this->isCsrfTokenValid('item_list_'.$connection.'_'.$item->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
 
-        $blockers = $ebay->blockers($item);
+        $blockers = $marketplace->blockers($item, $connection);
         if ([] !== $blockers) {
             $this->addFlash('danger', implode(' ', $blockers));
 
@@ -70,12 +84,19 @@ final class ItemController extends AbstractController
         }
 
         try {
-            $ebay->publish($item, $request->request->getString('categoryId') ?: null);
-            $this->addFlash('success', sprintf('Listed on eBay: %s', $item->getEbayUrl() ?? $item->getEbayOfferId()));
+            $listing = $marketplace->publish($item, $connection, $request->request->getString('categoryId') ?: null);
+            $this->addFlash('success', sprintf(
+                'Listed on %s: %s',
+                $listing->provider,
+                $listing->url ?? $listing->externalId,
+            ));
         } catch (MarketplaceException $e) {
-            // eBay's rejections name the field and the accepted values; passing the
-            // message through beats "could not list".
+            // The providers' rejections name the field and the accepted values;
+            // passing the message through beats "could not list".
             $this->addFlash('danger', $e->getMessage());
+        } catch (\LogicException $e) {
+            // e.g. publishing through a connection that has no seller token yet.
+            $this->addFlash('warning', $e->getMessage());
         }
 
         return $this->redirectToRoute('admin_item_show', ['id' => $item->getId()]);

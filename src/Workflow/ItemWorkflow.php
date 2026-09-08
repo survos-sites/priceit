@@ -6,7 +6,7 @@ namespace App\Workflow;
 
 use App\Entity\Item;
 use App\Service\DepotPrintClient;
-use App\Service\EbayListingPublisher;
+use App\Service\MarketplaceListingPublisher;
 use App\Service\PricingSuggestionService;
 use App\Service\QuickbaseInventoryPublisher;
 use App\Workflow\ItemFlow as WF;
@@ -33,7 +33,9 @@ final readonly class ItemWorkflow
     public function __construct(
         private PricingSuggestionService $pricing,
         private DepotPrintClient $depot,
-        private EbayListingPublisher $ebay,
+        private MarketplaceListingPublisher $marketplace,
+        #[Autowire('%env(default::MARKETPLACE_CONNECTION)%')]
+        private ?string $listingConnection,
         private QuickbaseInventoryPublisher $inventory,
         #[Autowire('%env(PRICEIT_PUBLIC_URL)%')]
         private string $publicUrl,
@@ -210,13 +212,13 @@ final readonly class ItemWorkflow
         $item = $event->getSubject();
         \assert($item instanceof Item);
 
-        if (!$this->ebay->isAvailable()) {
+        if (null === $this->listingConnection || '' === $this->listingConnection) {
             throw new UnrecoverableMessageHandlingException(
-                'eBay is not configured; set EBAY_CONNECTION and the survos_marketplace connection.',
+                'No MARKETPLACE_CONNECTION set, so there is no marketplace to list on.',
             );
         }
 
-        $blockers = $this->ebay->blockers($item);
+        $blockers = $this->marketplace->blockers($item, $this->listingConnection);
         if ([] !== $blockers) {
             // Unrecoverable: a missing price or an unreachable photo will not fix
             // itself on a retry a second later. Someone has to go and change it.
@@ -224,11 +226,12 @@ final readonly class ItemWorkflow
         }
 
         try {
-            $this->ebay->publish($item);
+            $this->marketplace->publish($item, $this->listingConnection);
         } catch (\Throwable $e) {
-            $this->logger->error('priceit: could not list on eBay', [
+            $this->logger->error('priceit: could not list on the marketplace', [
                 'item' => $item->getId(),
                 'sku' => $item->getSku(),
+                'connection' => $this->listingConnection,
                 'error' => $e->getMessage(),
             ]);
 

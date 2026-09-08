@@ -111,21 +111,21 @@ class Item
     private ?\DateTimeImmutable $quickbaseExportedAt = null;
 
     /**
-     * eBay's offer id -- the handle every eBay write accepts, including withdrawing
-     * the listing. Set once the item is live.
+     * Where this item is listed, keyed by provider: ebay, mercadolibre, ...
+     *
+     * A map rather than a column per marketplace. The same object can be listed in
+     * more than one place, the set of marketplaces is configuration rather than
+     * schema, and adding the third one should not be a migration.
+     *
+     * Each entry is {externalId, url, listedAt}. externalId is whatever handle that
+     * provider's own write operations accept -- eBay's OFFER id, not its listing id;
+     * Mercado Libre's item id.
+     *
+     * @var array<string, array{externalId: string, url: string|null, listedAt: string}>
      */
-    #[ORM\Column(length: 64, nullable: true)]
+    #[ORM\Column(options: ['default' => '{}'])]
     #[Groups(['item:read'])]
-    private ?string $ebayOfferId = null;
-
-    /** The public listing id, the one that appears in an ebay.com/itm/ URL. */
-    #[ORM\Column(length: 64, nullable: true)]
-    #[Groups(['item:read'])]
-    private ?string $ebayListingId = null;
-
-    #[ORM\Column(nullable: true)]
-    #[Groups(['item:read'])]
-    private ?\DateTimeImmutable $ebayListedAt = null;
+    private array $marketplaceListings = [];
 
     /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -286,46 +286,61 @@ class Item
         return $this;
     }
 
-    public function getEbayOfferId(): ?string
+    /** @return array<string, array{externalId: string, url: string|null, listedAt: string}> */
+    public function getMarketplaceListings(): array
     {
-        return $this->ebayOfferId;
+        return $this->marketplaceListings;
     }
 
-    public function getEbayListingId(): ?string
+    /** @return array{externalId: string, url: string|null, listedAt: string}|null */
+    public function getListing(string $provider): ?array
     {
-        return $this->ebayListingId;
+        return $this->marketplaceListings[$provider] ?? null;
     }
 
-    public function getEbayListedAt(): ?\DateTimeImmutable
+    /** Re-listing where a listing already exists would create a duplicate, not update one. */
+    public function isListedOn(string $provider): bool
     {
-        return $this->ebayListedAt;
+        return isset($this->marketplaceListings[$provider]);
     }
 
-    /** Whether this item is already live on eBay. Re-listing would create a duplicate. */
-    public function isListedOnEbay(): bool
+    public function getListingUrl(string $provider): ?string
     {
-        return null !== $this->ebayOfferId;
+        return $this->marketplaceListings[$provider]['url'] ?? null;
     }
 
-    /** The public URL of the listing, once there is one. */
-    public function getEbayUrl(): ?string
+    public function getListingExternalId(string $provider): ?string
     {
-        return null !== $this->ebayListingId
-            ? 'https://www.ebay.com/itm/'.$this->ebayListingId
-            : null;
+        return $this->marketplaceListings[$provider]['externalId'] ?? null;
     }
 
-    public function recordEbayListing(string $offerId, ?string $listingId): static
+    public function getListedAt(string $provider): ?\DateTimeImmutable
     {
-        $this->ebayOfferId = $offerId;
-        $this->ebayListingId = $listingId;
-        $this->ebayListedAt = new \DateTimeImmutable();
+        $at = $this->marketplaceListings[$provider]['listedAt'] ?? null;
+
+        return \is_string($at) ? new \DateTimeImmutable($at) : null;
+    }
+
+    public function recordListing(string $provider, string $externalId, ?string $url = null): static
+    {
+        $this->marketplaceListings[$provider] = [
+            'externalId' => $externalId,
+            'url' => $url,
+            'listedAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+        ];
+
+        return $this;
+    }
+
+    public function forgetListing(string $provider): static
+    {
+        unset($this->marketplaceListings[$provider]);
 
         return $this;
     }
 
     /**
-     * The SKU eBay keys inventory on.
+     * The SKU a marketplace keys inventory on.
      *
      * The client id is already unique and already travels with the item from the
      * phone, so it needs no second identity invented for it.

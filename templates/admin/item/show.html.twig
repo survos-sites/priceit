@@ -73,36 +73,42 @@
                             <button type="submit" class="btn btn-outline-primary">Print label</button>
                         </form>
 
-                        {% if item.listedOnEbay %}
-                            <a href="{{ item.ebayUrl }}" target="_blank" rel="noopener"
-                               class="btn btn-outline-success">
-                                View on eBay &nearr;
-                            </a>
-                        {% else %}
-                            <form method="post" action="{{ path('admin_item_list_ebay', {id: item.id}) }}"
-                                  onsubmit="return confirm('This publishes the item publicly on eBay. Continue?')">
-                                <input type="hidden" name="_token" value="{{ csrf_token('item_list_ebay_' ~ item.id) }}">
-                                <button type="submit" class="btn btn-outline-dark"
-                                        {{ ebayBlockers is empty ? '' : 'disabled' }}>
-                                    Post to eBay
-                                </button>
-                            </form>
-                        {% endif %}
+                        {% for name, target in marketplaceTargets %}
+                            {% if target.listing %}
+                                <a href="{{ target.listing.url ?? '#' }}" target="_blank" rel="noopener"
+                                   class="btn btn-outline-success">
+                                    View on {{ target.provider }} &nearr;
+                                </a>
+                            {% else %}
+                                <form method="post"
+                                      action="{{ path('admin_item_list_marketplace', {id: item.id, connection: name}) }}"
+                                      onsubmit="return confirm('This publishes the item publicly on {{ target.provider }}. Continue?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('item_list_' ~ name ~ '_' ~ item.id) }}">
+                                    <button type="submit" class="btn btn-outline-dark"
+                                            {{ target.blockers is empty ? '' : 'disabled' }}>
+                                        Post to {{ target.provider }} ({{ target.site }})
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endfor %}
                     </div>
 
-                    {% if item.listedOnEbay %}
-                        <div class="text-secondary mt-3 small">
-                            Listed on eBay {{ item.ebayListedAt|date('j M Y, g:ia') }}
-                            (offer <code>{{ item.ebayOfferId }}</code>).
-                        </div>
-                    {% elseif ebayBlockers is not empty %}
-                        <div class="text-secondary mt-3 small">
-                            {# Say why the button is disabled, rather than leaving it a mystery. #}
-                            {% for blocker in ebayBlockers %}
-                                <div>Not ready for eBay: {{ blocker }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {% for name, target in marketplaceTargets %}
+                        {% if target.listing %}
+                            <div class="text-secondary mt-3 small">
+                                Listed on {{ target.provider }}
+                                {{ target.listing.listedAt|date('j M Y, g:ia') }}
+                                (<code>{{ target.listing.externalId }}</code>).
+                            </div>
+                        {% elseif target.blockers is not empty %}
+                            <div class="text-secondary mt-3 small">
+                                {# Say why the button is disabled rather than leaving it a mystery. #}
+                                {% for blocker in target.blockers %}
+                                    <div>Not ready for {{ target.provider }}: {{ blocker }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
 
                     <div class="text-secondary mt-3 small">
                         {% if not aiConfigured %}
