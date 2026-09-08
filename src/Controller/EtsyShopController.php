@@ -6,6 +6,8 @@ namespace App\Controller;
 
 use Survos\Etsy\Auth\EtsyCredentials;
 use Survos\Etsy\Exception\EtsyException;
+use Survos\MarketplaceContracts\Contract\DraftPublisherInterface;
+use Survos\MarketplaceContracts\Exception\MarketplaceException;
 use Survos\Etsy\Generated\ShopApi;
 use Survos\Etsy\Generated\ShopListingApi;
 use Survos\Etsy\Http\EtsyTransport;
@@ -16,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Service\MarketplaceListingPublisher;
 
 /**
  * Read-only view of a connected Etsy shop.
@@ -37,7 +40,43 @@ final class EtsyShopController extends AbstractController
         #[Autowire('%survos_marketplace.connections%')]
         private readonly array $connections = [],
         private readonly ?EtsyTokenProviderFactory $tokens = null,
+        private readonly ?MarketplaceListingPublisher $marketplace = null,
     ) {
+    }
+
+    /**
+     * Take a draft live.
+     *
+     * Deliberately its own action rather than part of creating the listing: this
+     * is the moment Etsy charges the listing fee, so it belongs to a person
+     * clicking a button after looking at the draft, not to a scan.
+     */
+    #[Route('/publish/{connection}/{listingId}', name: 'publish', methods: ['POST'])]
+    public function publishDraft(Request $request, string $connection, string $listingId): Response
+    {
+        if (!$this->isCsrfTokenValid('etsy_publish_' . $listingId, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $adapter = $this->marketplace?->adapter($connection);
+
+        if (!$adapter instanceof DraftPublisherInterface) {
+            $this->addFlash('danger', sprintf('%s cannot publish drafts.', $connection));
+
+            return $this->redirectToRoute('etsy_shop', ['connection' => $connection, 'state' => 'draft']);
+        }
+
+        try {
+            $listing = $adapter->activate($listingId);
+            $this->addFlash('success', sprintf(
+                'Published — now live at %s',
+                $listing->url ?? $listing->externalId,
+            ));
+        } catch (MarketplaceException|EtsyException $e) {
+            $this->addFlash('danger', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('etsy_shop', ['connection' => $connection, 'state' => 'draft']);
     }
 
     #[Route('/shop/{connection}', name: 'shop', defaults: ['connection' => 'dave_etsy'])]

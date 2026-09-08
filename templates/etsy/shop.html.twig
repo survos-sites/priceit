@@ -63,7 +63,7 @@
             <table class="table table-sm align-middle">
                 <thead><tr>
                     <th></th><th>Title</th><th>State</th><th class="text-end">Price</th>
-                    <th class="text-end">Qty</th><th>Listing id</th>
+                    <th class="text-end">Qty</th><th>Listing id</th><th></th>
                 </tr></thead>
                 <tbody>
                 {% for listing in listings.results ?? [] %}
@@ -95,9 +95,22 @@
                         </td>
                         <td class="text-end">{{ listing.quantity ?? '—' }}</td>
                         <td><code class="small">{{ listing.listing_id }}</code></td>
+                        <td class="text-end">
+                            {% if listing.state == 'draft' %}
+                                {# The one action that costs money: Etsy charges its
+                                   listing fee the moment a draft goes active, so it
+                                   asks first and is never automatic. #}
+                                <form method="post" class="d-inline"
+                                      action="{{ path('etsy_publish', {connection: connection, listingId: listing.listing_id}) }}"
+                                      onsubmit="return confirm('Publish “{{ listing.title|e('js') }}” to Etsy? This makes it visible to buyers and incurs Etsy\'s listing fee.')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('etsy_publish_' ~ listing.listing_id) }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Publish</button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="6" class="text-secondary">
+                    <tr><td colspan="7" class="text-secondary">
                         No listings{{ state ? ' in state "' ~ state ~ '"' : '' }}.
                     </td></tr>
                 {% endfor %}
