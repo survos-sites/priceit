@@ -1,5 +1,12 @@
 twig:
     file_name_pattern: '*.twig'
+    # Vertical, not horizontal: bootstrap_5_horizontal_layout puts the label in a column
+    # beside the input, which on a phone -- where every form in this app is filled in --
+    # squeezes both. Vertical stacks them, which is what the narrow viewport wants anyway.
+    #
+    # Without a theme Symfony emits bare <div><label><input>, which is what /register and
+    # /login were rendering: no classes at all, so nothing could style them.
+    form_themes: ['bootstrap_5_layout.html.twig']
 
 when@test:
     twig:

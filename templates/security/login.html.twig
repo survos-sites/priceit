@@ -1,38 +1,68 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Log in!{% endblock %}
+{% block title %}Sign in — PriceIt{% endblock %}
+{% block navbar_title %}Sign in{% endblock %}
 
 {% block body %}
-    <form method="post">
-        {% if error %}
-            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-        {% endif %}
+    {# Hand-written rather than a Symfony form: form_login reads _username/_password straight
+       off the request, so there is no form type here for form/f7_layout.html.twig to theme.
+       The markup mirrors that theme by hand so this page and /register look like one app.
+       The Bootstrap classes it shipped with (.form-control, .btn, .alert) style nothing in
+       the F7 shell -- Bootstrap lives on the importmap('admin') path only. #}
 
-        {% if app.user %}
-            <div class="mb-3">
-                You are logged in as {{ app.user.userIdentifier }}, <a href="{{ logout_path() }}">Logout</a>
-            </div>
-        {% endif %}
+    {% for message in app.flashes('success') %}
+        <div class="block block-strong inset">{{ message }}</div>
+    {% endfor %}
 
-        <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
-        <label for="username">Email</label>
-        <input type="email" value="{{ last_username }}" name="_username" id="username" class="form-control" autocomplete="email" required autofocus>
-        <label for="password">Password</label>
-        <input type="password" name="_password" id="password" class="form-control" autocomplete="current-password" required>
-        <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
+    {% if error %}
+        <div class="block block-strong inset text-color-red">
+            {{ error.messageKey|trans(error.messageData, 'security') }}
+        </div>
+    {% endif %}
 
-        {#
-            Uncomment this section and add a remember_me option below your firewall to activate remember me functionality.
-            See https://symfony.com/doc/current/security/remember_me.html
+    {% if app.user %}
+        <div class="block block-strong inset">
+            Signed in as {{ app.user.userIdentifier }} —
+            <a href="{{ logout_path() }}">log out</a>
+        </div>
+    {% endif %}
 
-            <div class="checkbox mb-3">
-                <input type="checkbox" name="_remember_me" id="_remember_me">
-                <label for="_remember_me">Remember me</label>
-            </div>
-        #}
+    <form method="post" class="list list-strong-ios list-outline-ios list-dividers-ios">
+        <ul>
+            <li>
+                <div class="item-content item-input">
+                    <div class="item-inner">
+                        <div class="item-title item-label">Email</div>
+                        <div class="item-input-wrap">
+                            <input type="email" name="_username" id="username"
+                                   value="{{ last_username }}"
+                                   autocomplete="email" required autofocus>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <div class="item-content item-input">
+                    <div class="item-inner">
+                        <div class="item-title item-label">Password</div>
+                        <div class="item-input-wrap">
+                            <input type="password" name="_password" id="password"
+                                   autocomplete="current-password" required>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </ul>
 
-        <button class="btn btn-lg btn-primary" type="submit">
-            Sign in
-        </button>
+        <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+               value="{{ csrf_token('authenticate') }}">
+
+        <div class="block">
+            <button class="button button-fill button-large" type="submit">Sign in</button>
+        </div>
     </form>
+
+    <div class="block-footer text-align-center">
+        No account? <a href="{{ path('app_register') }}">Create one</a>
+    </div>
 {% endblock %}
