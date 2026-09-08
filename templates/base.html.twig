@@ -28,30 +28,13 @@
                     </div>
 
                     {% block toolbar %}
-                        {# Real hrefs, not F7 in-page tabs.
-                           fw7-demo's tabbar drives href="#tab-name" against content already in
-                           the document, switched client-side. PriceIt renders every page on the
-                           server and f7_controller deliberately disables F7's router
-                           (clicks.externalLinks: 'a'), so anchors here must be ordinary
-                           navigations. Same markup and the same look; the active tab is decided
-                           server-side from the route instead of by F7. #}
-                        {% set _route = app.request.attributes.get('_route') %}
-                        {% set _tabs = [
-                            {route: 'item_capture',   label: 'Capture', icon: 'camera_fill'},
-                            {route: 'app_item_index', label: 'Items',   icon: 'square_list_fill', active_for: ['app_item_show']}
-                        ] %}
+                        {# fw-bundle's own tabbar. MOBILE_TAB_MENU_LINKED renders real hrefs with
+                           the active tab resolved by KnpMenu's route matcher; App\Menu\TabMenu
+                           supplies the items. This was a hardcoded array here with a hand-rolled
+                           active state, including an active_for list the matcher makes redundant. #}
                         <div class="toolbar tabbar toolbar-bottom">
                             <div class="toolbar-inner">
-                                {% for tab in _tabs %}
-                                    {# A detail page keeps its section lit: dropping into an item
-                                       is still being in Items, and a tabbar that goes blank there
-                                       reads as having left the app. #}
-                                    {% set _active = _route == tab.route or _route in (tab.active_for|default([])) %}
-                                    <a href="{{ path(tab.route) }}" class="tab-link{{ _active ? ' tab-link-active' : '' }}">
-                                        <i class="icon f7-icons">{{ tab.icon }}</i>
-                                        <span class="tabbar-label">{{ tab.label }}</span>
-                                    </a>
-                                {% endfor %}
+                                <twig:mobile_menu type="MOBILE_TAB_MENU_LINKED" caller="base.html.twig" />
                             </div>
                         </div>
                     {% endblock %}
