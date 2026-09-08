@@ -467,6 +467,9 @@
             "config/packages/workflow.yaml"
         ]
     },
+    "symfonycasts/verify-email-bundle": {
+        "version": "v1.18.0"
+    },
     "twig/extra-bundle": {
         "version": "v3.24.0"
     },
