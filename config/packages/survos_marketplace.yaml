@@ -51,17 +51,24 @@ survos_marketplace:
         # their own app at etsy.com/developers/register-seller-app and supplies a
         # keystring. That is why these live in options rather than a shared block.
         #
-        # tac_test is your own throwaway shop. Etsy removed its sandbox, so a real
-        # shop with "test" in the name and Developer Mode on is the sanctioned way
-        # to test — see their API testing policy. Drafts cost nothing.
-        tac_test:
+        # Dave's own shop, not a test shop. Etsy charges a one-time set-up fee of
+        # $15-29 per NEW shop — including additional shops for existing sellers —
+        # and wants identity verification and a bank account for it, so a
+        # throwaway shop for testing is a bad trade.
+        #
+        # Developing against his real shop is safe enough: a draft listing costs
+        # nothing (the $0.20 fee lands on publish, not on create), no buyer can
+        # see it, and either of us can delete it. Turn on Developer Mode in his
+        # shop settings, keep test prices under $1, and only ever create drafts —
+        # which is all EtsyAdapter::publish() can do anyway.
+        dave_etsy:
             driver: etsy
             site: ETSY
             options:
-                keystring: '%env(ETSY_TEST_KEYSTRING)%'
-                shared_secret: '%env(ETSY_TEST_SHARED_SECRET)%'
+                keystring: '%env(ETSY_KEYSTRING)%'
+                shared_secret: '%env(ETSY_SHARED_SECRET)%'
                 redirect_uri: '%env(ETSY_REDIRECT_URI)%'
-                shop_id: '%env(ETSY_TEST_SHOP_ID)%'
+                shop_id: '%env(ETSY_SHOP_ID)%'
                 # Vintage postcards: not made by the seller, and pre-2007.
                 who_made: someone_else
                 when_made: before_2007
