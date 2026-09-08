@@ -2626,7 +2626,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     }>,
  * }
  * @psalm-type SurvosMarketplaceConfig = array{
- *     token_dir?: scalar|Param|null, // Where FileTokenStore keeps OAuth tokens. One JSON file per connection; keep it out of the webroot and out of git. // Default: "%kernel.project_dir%/var/marketplace-tokens"
+ *     token_store?: "doctrine"|"file"|Param, // Where OAuth tokens live. "doctrine" (default) survives redeploys and is shared across processes; "file" writes JSON under token_dir and suits a single-process dev machine. A container filesystem is replaced on every deploy, and two processes with separate files will rotate each other's refresh tokens away. // Default: "doctrine"
+ *     token_dir?: scalar|Param|null, // Only used by token_store: file. // Default: "%kernel.project_dir%/var/marketplace-tokens"
  *     ebay?: array{ // eBay application keyset. Sandbox and production keysets are separate and not interchangeable.
  *         client_id?: scalar|Param|null, // Default: null
  *         client_secret?: scalar|Param|null, // Default: null
