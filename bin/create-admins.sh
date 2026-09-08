@@ -11,8 +11,13 @@ bin/console survos:user:create super@survos.com tt --roles ROLE_SUPER_ADMIN --fo
 bin/console survos:user:create tac@survos.com tt --roles ROLE_ADMIN --force
 bin/console survos:user:create tacman@gmail.com tt --roles ROLE_ALLOWED_TO_SWITCH --roles ROLE_ADMIN --force
 
+# Dave, the seller. ROLE_USER only -- security.yaml gates /admin, /items and
+# /capture on ROLE_USER, so this is enough to review his own items and see what
+# would be listed, without the admin roles above.
+bin/console survos:user:create dglass123@hotmail.com tt --roles ROLE_USER --force
+
 # UnverifiedUserChecker refuses a login until isVerified, and the confirmation
 # arrives by email — which is not wired locally. These accounts never go through
 # registration, so mark them verified directly.
-bin/console dbal:run-sql "UPDATE \"user\" SET is_verified = true WHERE email IN ('super@survos.com','tac@survos.com','tacman@gmail.com')" >/dev/null
+bin/console dbal:run-sql "UPDATE \"user\" SET is_verified = true WHERE email IN ('super@survos.com','tac@survos.com','tacman@gmail.com','dglass123@hotmail.com')" >/dev/null
 echo "  → marked verified"

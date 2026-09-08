@@ -15,6 +15,11 @@ use Survos\MarketplaceContracts\Model\ListingImage;
 use Survos\MarketplaceContracts\Model\ListingViolation;
 use Survos\MarketplaceContracts\Model\Money;
 use Survos\MarketplaceContracts\Model\PublishedListing;
+use App\Repository\ItemRepository;
+use Symfony\Component\Console\Attribute\Argument;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Vich\UploaderBundle\Storage\StorageInterface;
 
@@ -39,7 +44,109 @@ final class MarketplaceListingPublisher
         private readonly array $connections = [],
         private readonly ?MarketplaceService $marketplace = null,
         private readonly ?StorageInterface $storage = null,
+        private readonly ?ItemRepository $items = null,
     ) {
+    }
+
+    /**
+     * Everything publish() would do, without sending anything.
+     *
+     * Worth having as its own command because the marketplaces differ in how much
+     * they will tell you before you commit: this resolves the category, builds the
+     * draft and validates it, so a bad category or a missing required attribute
+     * shows up here rather than as a rejected listing on a real seller's shop.
+     */
+    #[AsCommand('marketplace:preview', 'Resolve a category and validate an item, without publishing')]
+    public function previewCommand(
+        SymfonyStyle $io,
+        #[Argument('Connection name')] string $connection,
+        #[Argument('Item id')] int $itemId,
+    ): int {
+        $item = $this->items?->find($itemId);
+        if (null === $item) {
+            $io->error(sprintf('No item %d.', $itemId));
+
+            return Command::FAILURE;
+        }
+
+        $io->definitionList(
+            ['item' => sprintf('%d — %s', $item->getId(), $item->getTitle() ?? '(untitled)')],
+            ['price' => (string) $item->getPrice()],
+            ['profile' => $item->getProfile()->value],
+            ['photos' => (string) count($item->getPhotos())],
+        );
+
+        $blockers = $this->blockers($item, $connection);
+        if ([] !== $blockers) {
+            $io->error($blockers);
+
+            return Command::FAILURE;
+        }
+        $io->success('No blockers.');
+
+        $adapter = $this->adapter($connection);
+        $rows = [];
+        foreach ($adapter->suggestCategories((string) $item->getTitle()) as $s) {
+            $rows[] = [$s->categoryId, $s->name, $s->confidence ?? '-', $s->breadcrumb()];
+        }
+        $io->section('Category candidates');
+        $io->table(['id', 'name', 'score', 'path'], $rows);
+
+        $draft = $this->draft($item, $connection);
+        $io->section(sprintf('Draft (category %s)', $draft->categoryId ?? 'NONE'));
+        $io->definitionList(
+            ['title' => $draft->title],
+            ['price' => (string) $draft->price],
+            ['images' => implode("\n", array_map(static fn ($i): string => $i->url, $draft->images))],
+        );
+
+        $violations = $this->validate($draft, $connection);
+        if ([] === $violations) {
+            $io->success('Validates clean — publish would be accepted.');
+
+            return Command::SUCCESS;
+        }
+
+        $io->section('Violations');
+        $io->listing(array_map(static fn ($v): string => (string) $v, $violations));
+
+        return Command::FAILURE;
+    }
+
+    /** Publish for real. On Etsy this creates a DRAFT; the seller publishes it themselves. */
+    #[AsCommand('marketplace:publish', 'Publish an item to a marketplace')]
+    public function publishCommand(
+        SymfonyStyle $io,
+        #[Argument('Connection name')] string $connection,
+        #[Argument('Item id')] int $itemId,
+    ): int {
+        $item = $this->items?->find($itemId);
+        if (null === $item) {
+            $io->error(sprintf('No item %d.', $itemId));
+
+            return Command::FAILURE;
+        }
+
+        try {
+            $listing = $this->publish($item, $connection);
+        } catch (\Throwable $e) {
+            $io->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $io->success(sprintf('%s: %s', $listing->provider, $listing->url ?? $listing->externalId));
+        $io->definitionList(
+            ['external id' => $listing->externalId],
+            ['state' => (string) ($listing->raw['state'] ?? '-')],
+            ['images uploaded' => (string) ($listing->raw['imagesUploaded'] ?? '-')],
+        );
+
+        foreach ((array) ($listing->raw['imageErrors'] ?? []) as $err) {
+            $io->warning((string) $err);
+        }
+
+        return Command::SUCCESS;
     }
 
     public function isAvailable(): bool

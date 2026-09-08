@@ -1,0 +1,109 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Etsy — {{ shop ? shop.shop_name : connection }}{% endblock %}
+
+{% block body %}
+<div class="container-xl py-3">
+
+    <div class="d-flex align-items-baseline gap-3 mb-3">
+        <h2 class="m-0">
+            {{ shop ? shop.shop_name : 'Etsy' }}
+            <span class="text-secondary fs-4">{{ connection }}</span>
+        </h2>
+        {% if shop %}
+            <a href="https://www.etsy.com/shop/{{ shop.shop_name }}" target="_blank" rel="noopener"
+               class="text-secondary small">open on etsy.com &nearr;</a>
+        {% endif %}
+    </div>
+
+    {% if error %}
+        {# A failure here is the connection, not the listing — worth saying plainly. #}
+        <div class="alert alert-danger">
+            <strong>Etsy rejected the request.</strong>
+            <div class="small mt-1"><code>{{ error }}</code></div>
+            <div class="small mt-2">
+                If this mentions a token, reconnect at
+                <a href="{{ path('etsy_connect', {connection: connection}) }}">/etsy/connect/{{ connection }}</a>.
+            </div>
+        </div>
+    {% endif %}
+
+    {% if shop %}
+        <div class="row g-2 mb-3">
+            {% for label, value in {
+                'shop id': shop.shop_id,
+                'currency': shop.currency_code,
+                'active listings': shop.listing_active_count,
+                'on vacation': shop.is_vacation ? 'yes' : 'no',
+            } %}
+                <div class="col-auto">
+                    <div class="card"><div class="card-body py-2 px-3">
+                        <div class="text-secondary small">{{ label }}</div>
+                        <div class="fw-bold">{{ value ?? '—' }}</div>
+                    </div></div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="btn-group mb-3">
+            {% for s in ['active', 'draft', 'inactive', 'expired'] %}
+                <a href="{{ path('etsy_shop', {connection: connection, state: s}) }}"
+                   class="btn btn-sm {{ state == s ? 'btn-primary' : 'btn-outline-secondary' }}">{{ s }}</a>
+            {% endfor %}
+            <a href="{{ path('etsy_shop', {connection: connection}) }}"
+               class="btn btn-sm {{ state is null ? 'btn-primary' : 'btn-outline-secondary' }}">all</a>
+        </div>
+    {% endif %}
+
+    {% if listings %}
+        <div class="text-secondary small mb-2">
+            {{ listings.count ?? 0 }} listing(s){{ state ? ' in state "' ~ state ~ '"' : '' }}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr>
+                    <th></th><th>Title</th><th>State</th><th class="text-end">Price</th>
+                    <th class="text-end">Qty</th><th>Listing id</th>
+                </tr></thead>
+                <tbody>
+                {% for listing in listings.results ?? [] %}
+                    <tr>
+                        <td style="width:56px">
+                            {% set img = (listing.images ?? [])|first %}
+                            {% if img and img.url_75x75 is defined %}
+                                <img src="{{ img.url_75x75 }}" width="40" height="40"
+                                     class="rounded" style="object-fit:cover" alt="">
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if listing.url %}
+                                <a href="{{ listing.url }}" target="_blank" rel="noopener">{{ listing.title }}</a>
+                            {% else %}
+                                {{ listing.title }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ listing.state == 'active' ? 'success' : 'secondary' }}-lt">
+                                {{ listing.state }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if listing.price %}
+                                {{ (listing.price.amount / listing.price.divisor)|number_format(2) }}
+                                {{ listing.price.currency_code }}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-end">{{ listing.quantity ?? '—' }}</td>
+                        <td><code class="small">{{ listing.listing_id }}</code></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="text-secondary">
+                        No listings{{ state ? ' in state "' ~ state ~ '"' : '' }}.
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
