@@ -141,4 +141,65 @@ final class ClaimMapperTest extends TestCase
         self::assertSame([], $out['tags']);
         self::assertNull($out['country']);
     }
+
+    /**
+     * The real Item.metadata for marac-0005's cockatoo postcard, verbatim from the
+     * live API. This is the shape that matters most, and it is not obvious: spatial
+     * is a LIST, and it contains two places for two different reasons.
+     */
+    public function testMapsRealItemMetadata(): void
+    {
+        $out = (new ClaimMapper())->mapMetadata([
+            'dcterms:title' => 'Cockatoo. Parrot Jungle, Miami, Florida',
+            'dcterms:type' => 'postcard',
+            'dcterms:description' => "A postcard depicting 'Topsy,' a colorful Leadbeater cockatoo at Parrot Jungle, Miami, Florida.",
+            'dcterms:abstract' => "Postcard of 'Topsy,' a Leadbeater cockatoo, from Parrot Jungle, Miami.",
+            // Depicted place FIRST; the second is where it was posted to.
+            'dcterms:spatial' => ['Miami, Florida', 'Indianapolis, Indiana'],
+            'foaf:Person' => ['Miss Betty J. Rice'],
+            'ssai:primaryImageText' => 'DPHOLT moi ajBune joirog ojypyooD',
+            'ssai:hasText' => true,
+            'ssai:imageCount' => 2,
+            'ssai:itemSynthesisNotes' => 'Front shows the colorful cockatoo; reverse contains a vacation message and a postmark.',
+        ]);
+
+        self::assertSame('Cockatoo. Parrot Jungle, Miami, Florida', $out['title']);
+        self::assertSame('postcard', $out['type']);
+
+        // The place being SOLD, not the addressee's town.
+        self::assertSame('Miami', $out['city']);
+        self::assertSame('Florida', $out['state']);
+        self::assertSame('United States', $out['country']);
+
+        self::assertContains('Miami', $out['tags']);
+        self::assertContains('Florida', $out['tags']);
+
+        self::assertSame(['Miss Betty J. Rice'], $out['people']);
+        self::assertStringContainsString('postmark', (string) $out['synthesisNotes']);
+        self::assertNotNull($out['ocr']);
+    }
+
+    public function testTheAddresseesTownDoesNotBecomeTheListingPlace(): void
+    {
+        // Indianapolis is where it was POSTED TO. Tagging the listing with it would
+        // put the postcard in front of the wrong buyers.
+        $out = (new ClaimMapper())->mapMetadata([
+            'dcterms:spatial' => ['Miami, Florida', 'Indianapolis, Indiana'],
+        ]);
+
+        self::assertSame('Miami', $out['city']);
+        self::assertNotContains('Indianapolis', $out['tags']);
+    }
+
+    public function testMetadataAndClaimPathsReturnTheSameShape(): void
+    {
+        $mapper = new ClaimMapper();
+
+        self::assertSame(
+            array_keys($mapper->map([])),
+            array_keys($mapper->mapMetadata([])),
+            'a caller must not care which source produced the fields',
+        );
+    }
 }
+

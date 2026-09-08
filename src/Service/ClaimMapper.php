@@ -52,6 +52,48 @@ final readonly class ClaimMapper
      *     estimatedValue: ?string, valueConfidence: ?string
      * }
      */
+    /**
+     * Map an item's own metadata, which is the preferred source.
+     *
+     * Same shape as map(), so a caller does not care which produced it.
+     *
+     * @param array<string, mixed> $metadata Item.metadata from ssai
+     *
+     * @return array<string, mixed>
+     */
+    public function mapMetadata(array $metadata): array
+    {
+        // metadata holds bare values under the same predicate names, so reuse the
+        // claim path by wrapping each one. dcterms:spatial is a LIST here — the
+        // depicted place first, then anywhere else the AI recognised, typically the
+        // addressee's town. For a listing the first is what is being sold; Betty
+        // Rice's Indianapolis is not a tag anyone shops by.
+        $claims = [];
+        foreach ($metadata as $predicate => $value) {
+            foreach (is_array($value) && array_is_list($value) ? $value : [$value] as $single) {
+                if (is_scalar($single) || is_array($single)) {
+                    $claims[] = ['predicate' => $predicate, 'value' => $single, 'confidence' => '1'];
+                }
+            }
+        }
+
+        $mapped = $this->map($claims);
+
+        // ssai names these differently from the image-level claims.
+        $mapped['ocr'] ??= is_string($metadata['ssai:primaryImageText'] ?? null)
+            ? $metadata['ssai:primaryImageText']
+            : null;
+        $mapped['synthesisNotes'] = is_string($metadata['ssai:itemSynthesisNotes'] ?? null)
+            ? $metadata['ssai:itemSynthesisNotes']
+            : null;
+        $mapped['people'] = array_values(array_filter(
+            (array) ($metadata['foaf:Person'] ?? []),
+            static fn (mixed $p): bool => is_string($p) && '' !== $p,
+        ));
+
+        return $mapped;
+    }
+
     public function map(array $claims): array
     {
         $byPredicate = [];
@@ -86,6 +128,8 @@ final readonly class ClaimMapper
             // starts emitting it there is nothing to change here.
             'estimatedValue' => $this->firstValue($byPredicate['schema:price'] ?? []),
             'valueConfidence' => $this->confidenceOf($byPredicate['schema:price'] ?? []),
+            'synthesisNotes' => null,
+            'people' => [],
         ];
     }
 
