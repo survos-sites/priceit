@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Items — PriceIt{% endblock %}
+{% block navbar_title %}Items{% endblock %}
+
+{% block body %}
+    {# A media list, not the admin's table. The same rows on a phone would scroll sideways,
+       and the columns that matter while reviewing -- photo, title, price, where it is
+       listed -- are the ones a table pushes off the edge first. #}
+    <div class="list media-list links-list">
+        <ul>
+            {% for item in items %}
+                {% set photos = item.photos %}
+                <li>
+                    <a href="{{ path('app_item_show', {id: item.id}) }}">
+                        <div class="item-content">
+                            <div class="item-media">
+                                {% if photos|length %}
+                                    <img src="{{ vich_uploader_asset(photos[0], 'file') }}"
+                                         width="56" height="56"
+                                         style="object-fit: cover; border-radius: 8px;" alt="">
+                                {% else %}
+                                    {# Still a tile, not nothing: a missing photo should leave the
+                                       rows aligned, or the list looks broken rather than incomplete. #}
+                                    <div style="width:56px;height:56px;border-radius:8px;background:var(--f7-list-item-border-color,#e5e5e5);"></div>
+                                {% endif %}
+                            </div>
+                            <div class="item-inner">
+                                <div class="item-title-row">
+                                    <div class="item-title">{{ item.title ?? 'Untitled item #' ~ item.id }}</div>
+                                    <div class="item-after">
+                                        {% if item.profile.wantsPrice() %}
+                                            {{ item.price is not null ? '$' ~ item.price : '—' }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="item-subtitle" style="font-size:13px;opacity:.7;">
+                                    {{ photos|length }} photo{{ photos|length == 1 ? '' : 's' }}{{ item.audio ? ' · audio' : '' }}
+                                    {%- if item.assetNumber %} · <span style="font-family:monospace;">{{ item.assetNumber }}</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            {% else %}
+                <li>
+                    <div class="item-content">
+                        <div class="item-inner">
+                            <div class="item-title">Nothing captured yet</div>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% if items is empty %}
+        <div class="block">
+            <a href="{{ path('item_capture') }}" class="button button-fill button-large">Capture the first item</a>
+        </div>
+    {% endif %}
+{% endblock %}

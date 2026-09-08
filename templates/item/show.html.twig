@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ item.title ?? 'Item #' ~ item.id }} — PriceIt{% endblock %}
+{% block navbar_title %}{{ item.title ?? 'Item #' ~ item.id }}{% endblock %}
+
+{% block body %}
+    {% set photos = item.photos %}
+
+    {% if photos|length %}
+        {# Full-bleed and swipeable. On a phone the photo IS the item -- shrinking it into a
+           thumbnail grid to fit more metadata gets the priority backwards while reviewing. #}
+        <div class="swiper swiper-init" data-pagination='{"el": ".swiper-pagination"}'>
+            <div class="swiper-pagination"></div>
+            <div class="swiper-wrapper">
+                {% for photo in photos %}
+                    <div class="swiper-slide">
+                        <img src="{{ vich_uploader_asset(photo, 'file') }}"
+                             style="width:100%; display:block;" alt="">
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="block-title">Details</div>
+    <div class="list simple-list">
+        <ul>
+            {% if item.profile.wantsPrice() %}
+                <li>
+                    <span>Price</span>
+                    <span>{{ item.price is not null ? '$' ~ item.price : 'not set' }}</span>
+                </li>
+            {% endif %}
+            <li><span>Profile</span><span>{{ item.profile.label() }}</span></li>
+            <li><span>State</span><span>{{ item.marking }}</span></li>
+            {% if item.assetNumber %}
+                <li><span>Asset</span><span style="font-family:monospace;">{{ item.assetNumber }}</span></li>
+            {% endif %}
+            <li><span>Captured</span><span>{{ item.createdAt|date('M j, Y g:ia') }}</span></li>
+        </ul>
+    </div>
+
+    {% if item.description %}
+        <div class="block-title">Description</div>
+        <div class="block block-strong inset">{{ item.description|nl2br }}</div>
+    {% endif %}
+
+    {% if item.transcript %}
+        <div class="block-title">Voice note</div>
+        <div class="block block-strong inset" style="opacity:.8;">{{ item.transcript|nl2br }}</div>
+    {% endif %}
+
+    {# Read-only on purpose. Editing price, printing a label and listing on a marketplace all
+       POST to the /admin routes and redirect back into the Tabler skin, which would drop you
+       out of the app mid-task. Reviewing is what this screen is for; the link is honest about
+       where the rest still lives. #}
+    <div class="block">
+        <a href="{{ path('admin_item_show', {id: item.id}) }}" class="button button-outline">
+            Edit, print or list (admin)
+        </a>
+    </div>
+{% endblock %}
