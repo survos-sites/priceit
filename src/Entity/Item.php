@@ -60,9 +60,9 @@ class Item
      * Chosen on the capture screen. Decides what the model is asked for, what the label
      * carries, and whether confirming pushes the item to the loan closet.
      */
-    #[ORM\Column(length: 32, enumType: CaptureProfile::class, options: ['default' => 'auction'])]
+    #[ORM\Column(length: 32, enumType: CaptureProfile::class, options: ['default' => 'garage_sale'])]
     #[Groups(['item:read'])]
-    private CaptureProfile $profile = CaptureProfile::Auction;
+    private CaptureProfile $profile = CaptureProfile::GarageSale;
 
     /**
      * Human-readable identifier printed on a loan-closet label and used as the natural key in
@@ -136,7 +136,7 @@ class Item
     #[Groups(['item:read'])]
     private Collection $media;
 
-    public function __construct(string $clientId, CaptureProfile $profile = CaptureProfile::Auction)
+    public function __construct(string $clientId, CaptureProfile $profile = CaptureProfile::GarageSale)
     {
         $this->clientId = $clientId;
         $this->profile = $profile;

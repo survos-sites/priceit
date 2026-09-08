@@ -74,7 +74,17 @@ final class PricingSuggestionService
         'type' => 'number',
         // Structured outputs reject minimum/maximum on number, so the range is stated here
         // and clamped after the fact instead.
-        'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not eBay pricing.',
+        'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not online pricing.',
+    ];
+
+    /**
+     * Resale asks a different question, so it gets a different field description.
+     * Sharing one prompt between the two is what made the old single "auction"
+     * profile undersell anything worth listing online.
+     */
+    private const RESALE_PRICE_PROPERTY = [
+        'type' => 'number',
+        'description' => 'Suggested online asking price in US dollars, between 0.50 and 500, based on what this actually sells for on eBay or Mercado Libre — not what it would fetch on a folding table.',
     ];
 
     private const SYSTEM_AUCTION = <<<'TXT'
@@ -90,6 +100,21 @@ final class PricingSuggestionService
         Say what you actually see. If the photo is too dark or too cluttered to identify
         the item, say so in the description and set confidence to low rather than inventing
         a plausible object.
+        TXT;
+
+    private const SYSTEM_RESALE = <<<'TXT'
+        You are writing listings for items going onto eBay or Mercado Libre, where buyers
+        search for a specific thing and compare it against other listings of the same thing.
+
+        Price against what the item actually sells for online. This is NOT garage-sale
+        pricing: a collectible, a brand-name tool, or a piece of vintage glassware can be
+        worth many times what it would fetch on a folding table, and underpricing costs the
+        seller real money. If you cannot tell what something is well enough to price it
+        online, say so and set confidence to low rather than guessing low.
+
+        Write the title the way a buyer would search: maker, model, era, material, size.
+        Describe condition plainly, including flaws you can see. An undisclosed chip becomes
+        a return, which costs the seller more than the honest sentence would have.
         TXT;
 
     private const SYSTEM_MEDICAL = <<<'TXT'
@@ -133,7 +158,9 @@ final class PricingSuggestionService
         $schema = self::BASE_SCHEMA;
 
         if ($profile->wantsPrice()) {
-            $schema['properties']['priceUsd'] = self::PRICE_PROPERTY;
+            $schema['properties']['priceUsd'] = CaptureProfile::Resale === $profile
+                ? self::RESALE_PRICE_PROPERTY
+                : self::PRICE_PROPERTY;
             $schema['required'][] = 'priceUsd';
         }
 
@@ -143,7 +170,8 @@ final class PricingSuggestionService
     private static function systemFor(CaptureProfile $profile): string
     {
         return match ($profile) {
-            CaptureProfile::Auction => self::SYSTEM_AUCTION,
+            CaptureProfile::GarageSale => self::SYSTEM_AUCTION,
+            CaptureProfile::Resale => self::SYSTEM_RESALE,
             CaptureProfile::MedicalEquipment => self::SYSTEM_MEDICAL,
         };
     }

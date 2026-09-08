@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9226e736111689d26eed1a828af79186",
+    "content-hash": "6a79d74dd82df818aec8b5f6e069b81c",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -6311,16 +6311,16 @@
         },
         {
             "name": "survos/marketplace-bundle",
-            "version": "2.27.9",
+            "version": "2.27.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/marketplace-bundle.git",
-                "reference": "2007690d9541b4274321194d9170a0f3cf48fe27"
+                "reference": "e1ed601d26574e06387142e2d5c1f91bc727ac7e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/2007690d9541b4274321194d9170a0f3cf48fe27",
-                "reference": "2007690d9541b4274321194d9170a0f3cf48fe27",
+                "url": "https://api.github.com/repos/survos/marketplace-bundle/zipball/e1ed601d26574e06387142e2d5c1f91bc727ac7e",
+                "reference": "e1ed601d26574e06387142e2d5c1f91bc727ac7e",
                 "shasum": ""
             },
             "require": {
@@ -6373,7 +6373,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/marketplace-bundle/issues",
-                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.9"
+                "source": "https://github.com/survos/marketplace-bundle/tree/2.27.11"
             },
             "funding": [
                 {
@@ -6381,7 +6381,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-08T16:46:25+00:00"
+            "time": "2026-09-08T17:38:08+00:00"
         },
         {
             "name": "survos/marketplace-contracts",

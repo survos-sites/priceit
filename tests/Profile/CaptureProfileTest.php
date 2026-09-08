@@ -11,28 +11,34 @@ use PHPUnit\Framework\TestCase;
 
 final class CaptureProfileTest extends TestCase
 {
-    public function testAuctionPricesAndMedicalDoesNot(): void
+    public function testEverythingForSaleIsPricedAndLoanEquipmentIsNot(): void
     {
-        self::assertTrue(CaptureProfile::Auction->wantsPrice());
+        self::assertTrue(CaptureProfile::GarageSale->wantsPrice());
+        self::assertTrue(CaptureProfile::Resale->wantsPrice());
         self::assertFalse(CaptureProfile::MedicalEquipment->wantsPrice());
     }
 
     public function testOnlyMedicalEquipmentGetsAQrCodeAndAnAssetNumber(): void
     {
-        self::assertFalse(CaptureProfile::Auction->wantsQrCode());
-        self::assertFalse(CaptureProfile::Auction->assignsAssetNumber());
-        self::assertFalse(CaptureProfile::Auction->publishesToQuickbase());
+        foreach ([CaptureProfile::GarageSale, CaptureProfile::Resale] as $forSale) {
+            self::assertFalse($forSale->wantsQrCode());
+            self::assertFalse($forSale->assignsAssetNumber());
+            self::assertFalse($forSale->publishesToQuickbase());
+        }
 
         self::assertTrue(CaptureProfile::MedicalEquipment->wantsQrCode());
         self::assertTrue(CaptureProfile::MedicalEquipment->assignsAssetNumber());
         self::assertTrue(CaptureProfile::MedicalEquipment->publishesToQuickbase());
     }
 
-    public function testOnlyAuctionLotsGoToEbay(): void
+    public function testOnlyResaleItemsAreListedOnline(): void
     {
-        self::assertTrue(CaptureProfile::Auction->listsOnEbay());
+        // The whole point of the split: a garage-sale price is deliberately low, so
+        // putting it on eBay undersells. Only Resale goes online.
+        self::assertTrue(CaptureProfile::Resale->listsOnMarketplace());
+        self::assertFalse(CaptureProfile::GarageSale->listsOnMarketplace());
         // Loan-closet equipment is lent out free; selling it would be incoherent.
-        self::assertFalse(CaptureProfile::MedicalEquipment->listsOnEbay());
+        self::assertFalse(CaptureProfile::MedicalEquipment->listsOnMarketplace());
     }
 
     public function testTheMedicalPromptRefusesToAskForAValue(): void
@@ -46,10 +52,10 @@ final class CaptureProfileTest extends TestCase
         self::assertStringNotContainsString('garage sale', $guidance);
     }
 
-    public function testAnAuctionLabelCarriesThePriceAndNoQrCode(): void
+    public function testAGarageSaleLabelCarriesThePriceAndNoQrCode(): void
     {
         $zpl = (new PriceLabelService())->buildZpl(
-            $this->item(CaptureProfile::Auction, price: '24.00'),
+            $this->item(CaptureProfile::GarageSale, price: '24.00'),
             'https://example.test/admin/items/142',
         );
 
@@ -83,7 +89,7 @@ final class CaptureProfileTest extends TestCase
 
     public function testItemsDefaultToAuctionSoExistingCapturesAreUnchanged(): void
     {
-        self::assertSame(CaptureProfile::Auction, (new Item('c-1'))->getProfile());
+        self::assertSame(CaptureProfile::GarageSale, (new Item('c-1'))->getProfile());
     }
 
     private function item(CaptureProfile $profile, ?string $price = null): Item

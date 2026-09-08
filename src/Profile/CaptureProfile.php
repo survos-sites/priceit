@@ -14,8 +14,17 @@ namespace App\Profile;
  */
 enum CaptureProfile: string
 {
-    /** A garage-sale or auction lot. The question is "how much". */
-    case Auction = 'auction';
+    /**
+     * A garage-sale lot. Cheap, local, sold off a folding table today. The question
+     * is "what will someone hand over for this right now".
+     */
+    case GarageSale = 'garage_sale';
+
+    /**
+     * Something worth listing online rather than putting on a table. Priced against
+     * what it actually fetches, not against what clears a driveway by Sunday.
+     */
+    case Resale = 'resale';
 
     /**
      * A piece of medical equipment entering the Lions loan closet. There is no price: the
@@ -26,7 +35,8 @@ enum CaptureProfile: string
     public function label(): string
     {
         return match ($this) {
-            self::Auction => 'Auction lot',
+            self::GarageSale => 'Garage sale',
+            self::Resale => 'Resale (online)',
             self::MedicalEquipment => 'Medical equipment',
         };
     }
@@ -34,7 +44,8 @@ enum CaptureProfile: string
     public function description(): string
     {
         return match ($this) {
-            self::Auction => 'Priced for a garage sale. The label is mostly the price.',
+            self::GarageSale => 'Priced to move today. The label is mostly the price.',
+            self::Resale => 'Listed on eBay or Mercado Libre. Priced against what it sells for online.',
             self::MedicalEquipment => 'Tracked in the loan closet. The label is a QR code and an asset number.',
         };
     }
@@ -42,7 +53,7 @@ enum CaptureProfile: string
     /** Whether the model is asked for a price, and whether the label prints one. */
     public function wantsPrice(): bool
     {
-        return self::Auction === $this;
+        return self::MedicalEquipment !== $this;
     }
 
     /** Loaned equipment is scanned in and out, so its label carries a QR code. */
@@ -69,20 +80,20 @@ enum CaptureProfile: string
     }
 
     /**
-     * Whether this item can be listed on eBay.
+     * Whether this item can be listed on a marketplace.
      *
-     * Loan-closet equipment cannot: it is lent out free, and the profile already
-     * tells the model not to price it.
+     * Only Resale. This is why the profile split exists: a garage-sale price is
+     * deliberately low -- "cheap and someone wants them today" -- and putting that
+     * number on eBay systematically undersells. The two answers are different
+     * enough that they need different prompts, so they are different profiles
+     * rather than one profile with a caveat.
      *
-     * NOTE the tension for auction lots. promptGuidance() asks for a folding-table
-     * price -- "cheap and someone wants them today" -- which is the wrong number to
-     * put on eBay, where the comparable is what a thing actually fetches online.
-     * Listing is therefore a deliberate act on an item whose price a person has
-     * already confirmed, never an automatic consequence of the AI suggestion.
+     * Loan-closet equipment is lent out free; the profile already tells the model
+     * not to price it, so offering to sell it would be incoherent.
      */
-    public function listsOnEbay(): bool
+    public function listsOnMarketplace(): bool
     {
-        return self::Auction === $this;
+        return self::Resale === $this;
     }
 
     /**
@@ -94,7 +105,8 @@ enum CaptureProfile: string
     public function notePlaceholder(): string
     {
         return match ($this) {
-            self::Auction => "Anything the photo can't show — size, condition, what it's worth",
+            self::GarageSale => "Anything the photo can't show — size, condition, what it's worth",
+            self::Resale => "Anything the photo can't show — maker, age, condition, flaws a buyer would want disclosed",
             self::MedicalEquipment => "Anything the photo can't show — size, weight limit, missing parts",
         };
     }
@@ -103,10 +115,25 @@ enum CaptureProfile: string
     public function promptGuidance(): string
     {
         return match ($this) {
-            self::Auction => <<<'TXT'
+            self::GarageSale => <<<'TXT'
                 These photos are of an item going into a garage sale. Identify it, describe it
                 with a little charm, and suggest what it should be priced at on a folding table
                 on a Saturday morning.
+                TXT,
+            self::Resale => <<<'TXT'
+                These photos are of an item being listed for sale online, on eBay or Mercado
+                Libre, where buyers search for a specific thing and compare it against other
+                listings of the same thing.
+
+                Price it against what it actually sells for online, NOT what would clear a
+                driveway on a Saturday. A collectible, a brand-name tool or a piece of vintage
+                glassware can be worth many times its garage-sale price, and underpricing here
+                costs the seller real money.
+
+                Write the title the way a buyer would search for it -- maker, model, era,
+                material, size -- rather than the way a price sticker would read. Say plainly
+                what condition you can see, including flaws: an undisclosed chip becomes a
+                return, which costs more than the honest description would have.
                 TXT,
             self::MedicalEquipment => <<<'TXT'
                 These photos are of a piece of medical or mobility equipment entering a Lions

@@ -30,7 +30,7 @@ final class MarketplaceListingPublisherTest extends TestCase
         );
     }
 
-    private function item(CaptureProfile $profile = CaptureProfile::Auction): Item
+    private function item(CaptureProfile $profile = CaptureProfile::Resale): Item
     {
         $item = new Item('client-abc', $profile);
         $item->setTitle('Lote 5 postales antiguas de animales');
@@ -54,7 +54,7 @@ final class MarketplaceListingPublisherTest extends TestCase
     {
         // Lent out free; the profile already tells the model not to price it.
         self::assertContains(
-            'Medical equipment items are not listed for sale.',
+            'Medical equipment items are not listed online. Change the profile to "Resale" if it should be.',
             $this->publisher()->blockers($this->item(CaptureProfile::MedicalEquipment), 'dave'),
         );
     }

@@ -93,8 +93,11 @@ final class MarketplaceListingPublisher
 
         $provider = $this->providerFor($connection);
 
-        if (!$item->getProfile()->listsOnEbay()) {
-            $blockers[] = sprintf('%s items are not listed for sale.', $item->getProfile()->label());
+        if (!$item->getProfile()->listsOnMarketplace()) {
+            $blockers[] = sprintf(
+                '%s items are not listed online. Change the profile to "Resale" if it should be.',
+                $item->getProfile()->label(),
+            );
         }
         if ($item->isListedOn($connection)) {
             $blockers[] = sprintf('Already listed for "%s". Withdraw it before listing again.', $connection);

@@ -26,8 +26,8 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
     private static function profileFrom(mixed $value): CaptureProfile
     {
         return \is_string($value)
-            ? (CaptureProfile::tryFrom($value) ?? CaptureProfile::Auction)
-            : CaptureProfile::Auction;
+            ? (CaptureProfile::tryFrom($value) ?? CaptureProfile::GarageSale)
+            : CaptureProfile::GarageSale;
     }
 
     public function handle(CaptureRequest $request): CaptureResult
