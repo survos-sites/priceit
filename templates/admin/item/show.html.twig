@@ -75,10 +75,28 @@
 
                         {% for name, target in marketplaceTargets %}
                             {% if target.listing %}
-                                <a href="{{ target.listing.url ?? '#' }}" target="_blank" rel="noopener"
-                                   class="btn btn-outline-success">
-                                    View {{ name }} on {{ target.provider }} &nearr;
-                                </a>
+                                {# Etsy creates DRAFTS, and a draft has no public page —
+                                   listing.url 404s until the seller activates it. So the
+                                   editor is the link that always works, and the public
+                                   URL is offered next to it for when it is live. #}
+                                {% if target.provider == 'etsy' %}
+                                    <a href="https://www.etsy.com/your/shops/me/listing-editor/edit/{{ target.listing.externalId }}"
+                                       target="_blank" rel="noopener" class="btn btn-outline-secondary">
+                                        {{ ux_icon('tabler:edit', {width: 16, height: 16}) }}
+                                        Edit on {{ target.provider }}
+                                    </a>
+                                    <a href="{{ path('etsy_shop', {connection: name, state: 'draft'}) }}"
+                                       class="btn btn-outline-secondary" title="Drafts for this shop">
+                                        {{ ux_icon('tabler:eye', {width: 16, height: 16}) }}
+                                    </a>
+                                {% endif %}
+                                {% if target.listing.url %}
+                                    <a href="{{ target.listing.url }}" target="_blank" rel="noopener"
+                                       class="btn btn-outline-success">
+                                        {{ ux_icon('tabler:external-link', {width: 16, height: 16}) }}
+                                        View live on {{ target.provider }}
+                                    </a>
+                                {% endif %}
                             {% else %}
                                 <form method="post"
                                       action="{{ path('admin_item_list_marketplace', {id: item.id, connection: name}) }}"

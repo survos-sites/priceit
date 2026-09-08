@@ -63,7 +63,7 @@
             <table class="table table-sm align-middle">
                 <thead><tr>
                     <th></th><th>Title</th><th>State</th><th class="text-end">Price</th>
-                    <th class="text-end">Qty</th><th>Listing id</th><th></th>
+                    <th class="text-end">Qty</th><th>Listing id</th><th>Etsy</th><th></th>
                 </tr></thead>
                 <tbody>
                 {% for listing in listings.results ?? [] %}
@@ -75,13 +75,7 @@
                                      class="rounded" style="object-fit:cover" alt="">
                             {% endif %}
                         </td>
-                        <td>
-                            {% if listing.url %}
-                                <a href="{{ listing.url }}" target="_blank" rel="noopener">{{ listing.title }}</a>
-                            {% else %}
-                                {{ listing.title }}
-                            {% endif %}
-                        </td>
+                        <td>{{ listing.title }}</td>
                         <td>
                             <span class="badge bg-{{ listing.state == 'active' ? 'success' : 'secondary' }}-lt">
                                 {{ listing.state }}
@@ -95,6 +89,26 @@
                         </td>
                         <td class="text-end">{{ listing.quantity ?? '—' }}</td>
                         <td><code class="small">{{ listing.listing_id }}</code></td>
+                        <td class="text-nowrap">
+                            {# Etsy's own editor. A draft has no public page — its
+                               listing.url 404s until it goes active — so for anything
+                               not live this is the only place it can actually be seen
+                               and fixed. #}
+                            <a href="https://www.etsy.com/your/shops/me/listing-editor/edit/{{ listing.listing_id }}"
+                               target="_blank" rel="noopener"
+                               class="btn btn-sm btn-outline-secondary"
+                               title="Edit on Etsy">
+                                {{ ux_icon('tabler:edit', {width: 16, height: 16}) }} Edit
+                            </a>
+
+                            {% if listing.state == 'active' and listing.url %}
+                                <a href="{{ listing.url }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="View the live listing">
+                                    {{ ux_icon('tabler:external-link', {width: 16, height: 16}) }} View live
+                                </a>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             {% if listing.state == 'draft' %}
                                 {# The one action that costs money: Etsy charges its
@@ -110,7 +124,7 @@
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="7" class="text-secondary">
+                    <tr><td colspan="8" class="text-secondary">
                         No listings{{ state ? ' in state "' ~ state ~ '"' : '' }}.
                     </td></tr>
                 {% endfor %}
