@@ -72,7 +72,37 @@
                                    class="form-control" style="width:5rem" aria-label="Copies">
                             <button type="submit" class="btn btn-outline-primary">Print label</button>
                         </form>
+
+                        {% if item.listedOnEbay %}
+                            <a href="{{ item.ebayUrl }}" target="_blank" rel="noopener"
+                               class="btn btn-outline-success">
+                                View on eBay &nearr;
+                            </a>
+                        {% else %}
+                            <form method="post" action="{{ path('admin_item_list_ebay', {id: item.id}) }}"
+                                  onsubmit="return confirm('This publishes the item publicly on eBay. Continue?')">
+                                <input type="hidden" name="_token" value="{{ csrf_token('item_list_ebay_' ~ item.id) }}">
+                                <button type="submit" class="btn btn-outline-dark"
+                                        {{ ebayBlockers is empty ? '' : 'disabled' }}>
+                                    Post to eBay
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
+
+                    {% if item.listedOnEbay %}
+                        <div class="text-secondary mt-3 small">
+                            Listed on eBay {{ item.ebayListedAt|date('j M Y, g:ia') }}
+                            (offer <code>{{ item.ebayOfferId }}</code>).
+                        </div>
+                    {% elseif ebayBlockers is not empty %}
+                        <div class="text-secondary mt-3 small">
+                            {# Say why the button is disabled, rather than leaving it a mystery. #}
+                            {% for blocker in ebayBlockers %}
+                                <div>Not ready for eBay: {{ blocker }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
 
                     <div class="text-secondary mt-3 small">
                         {% if not aiConfigured %}

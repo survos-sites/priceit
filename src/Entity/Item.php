@@ -110,6 +110,23 @@ class Item
     #[Groups(['item:read'])]
     private ?\DateTimeImmutable $quickbaseExportedAt = null;
 
+    /**
+     * eBay's offer id -- the handle every eBay write accepts, including withdrawing
+     * the listing. Set once the item is live.
+     */
+    #[ORM\Column(length: 64, nullable: true)]
+    #[Groups(['item:read'])]
+    private ?string $ebayOfferId = null;
+
+    /** The public listing id, the one that appears in an ebay.com/itm/ URL. */
+    #[ORM\Column(length: 64, nullable: true)]
+    #[Groups(['item:read'])]
+    private ?string $ebayListingId = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['item:read'])]
+    private ?\DateTimeImmutable $ebayListedAt = null;
+
     /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['item:read'])]
@@ -267,6 +284,55 @@ class Item
         $this->quickbaseExportedAt = $quickbaseExportedAt;
 
         return $this;
+    }
+
+    public function getEbayOfferId(): ?string
+    {
+        return $this->ebayOfferId;
+    }
+
+    public function getEbayListingId(): ?string
+    {
+        return $this->ebayListingId;
+    }
+
+    public function getEbayListedAt(): ?\DateTimeImmutable
+    {
+        return $this->ebayListedAt;
+    }
+
+    /** Whether this item is already live on eBay. Re-listing would create a duplicate. */
+    public function isListedOnEbay(): bool
+    {
+        return null !== $this->ebayOfferId;
+    }
+
+    /** The public URL of the listing, once there is one. */
+    public function getEbayUrl(): ?string
+    {
+        return null !== $this->ebayListingId
+            ? 'https://www.ebay.com/itm/'.$this->ebayListingId
+            : null;
+    }
+
+    public function recordEbayListing(string $offerId, ?string $listingId): static
+    {
+        $this->ebayOfferId = $offerId;
+        $this->ebayListingId = $listingId;
+        $this->ebayListedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * The SKU eBay keys inventory on.
+     *
+     * The client id is already unique and already travels with the item from the
+     * phone, so it needs no second identity invented for it.
+     */
+    public function getSku(): string
+    {
+        return $this->clientId;
     }
 
     /** @return Collection<int, Media> */

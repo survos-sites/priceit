@@ -1,5 +1,12 @@
 doctrine:
     dbal:
+        # The dev postgres runs the timescale/timescaledb-ha image, whose extension
+        # creates catalog tables and sequences Doctrine knows nothing about. Without
+        # this filter, doctrine:schema:update and make:migration both emit
+        # DROP SEQUENCE _timescaledb_catalog.* -- 21 of them -- and d:sc:validate can
+        # never come back clean.
+        schema_filter: '~^(?!(?:_timescaledb_|timescaledb_|toolkit_))~'
+
         url: '%env(resolve:DATABASE_URL)%'
 
         # IMPORTANT: You MUST configure your server version,

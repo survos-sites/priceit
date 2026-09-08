@@ -48,6 +48,11 @@ class ItemFlow
     public const PLACE_TAGGED = 'tagged';
 
     #[Place(
+        info: 'Live on eBay. The offer id is recorded on the item, so the listing can be withdrawn later.',
+    )]
+    public const PLACE_LISTED = 'listed';
+
+    #[Place(
         info: 'The suggestion could not be made — usually an unreadable photo or a missing API key. Fixable, then retry.',
         next: [self::TRANSITION_SUGGEST],
     )]
@@ -92,4 +97,24 @@ class ItemFlow
         description: 'A label was printed. Re-enterable — labels get lost, spilled on, and reprinted.',
     )]
     public const TRANSITION_TAG = 'tag';
+
+    #[Transition(
+        // A printed label is not a prerequisite: something going to eBay is being
+        // shipped, not put on a table, so `priced` is enough.
+        from: [self::PLACE_PRICED, self::PLACE_TAGGED],
+        to: self::PLACE_LISTED,
+        info: 'List on eBay',
+        description: <<<'TXT'
+            Create the listing on eBay and publish it.
+
+            Deliberately NOT re-enterable, unlike tag. A second `tag` reprints a
+            sticker; a second `list` would put a second live listing on eBay for the
+            same object, and eBay would either refuse it (the SKU already has an
+            offer) or, worse, accept it. Withdrawing and relisting is a different
+            action than repeating this one.
+            TXT,
+        // Three HTTP calls to eBay, so not on the request. Same reasoning as suggest.
+        async: true,
+    )]
+    public const TRANSITION_LIST = 'list';
 }

@@ -6,6 +6,7 @@ namespace App\Workflow;
 
 use App\Entity\Item;
 use App\Service\DepotPrintClient;
+use App\Service\EbayListingPublisher;
 use App\Service\PricingSuggestionService;
 use App\Service\QuickbaseInventoryPublisher;
 use App\Workflow\ItemFlow as WF;
@@ -32,6 +33,7 @@ final readonly class ItemWorkflow
     public function __construct(
         private PricingSuggestionService $pricing,
         private DepotPrintClient $depot,
+        private EbayListingPublisher $ebay,
         private QuickbaseInventoryPublisher $inventory,
         #[Autowire('%env(PRICEIT_PUBLIC_URL)%')]
         private string $publicUrl,
@@ -191,5 +193,48 @@ final readonly class ItemWorkflow
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * The listing goes live here, so every route to eBay — the admin button, a CLI
+     * run — goes through the same transition and leaves the same marking behind.
+     *
+     * Unlike the Quickbase export, a failure DOES block. Nothing physical has
+     * happened by this point, so letting the item settle at `listed` with no
+     * listing would be a plain lie, and the offer id it needs to withdraw later
+     * would not exist.
+     */
+    #[AsTransitionListener(WF::WORKFLOW_NAME, WF::TRANSITION_LIST)]
+    public function onList(TransitionEvent $event): void
+    {
+        $item = $event->getSubject();
+        \assert($item instanceof Item);
+
+        if (!$this->ebay->isAvailable()) {
+            throw new UnrecoverableMessageHandlingException(
+                'eBay is not configured; set EBAY_CONNECTION and the survos_marketplace connection.',
+            );
+        }
+
+        $blockers = $this->ebay->blockers($item);
+        if ([] !== $blockers) {
+            // Unrecoverable: a missing price or an unreachable photo will not fix
+            // itself on a retry a second later. Someone has to go and change it.
+            throw new UnrecoverableMessageHandlingException(implode(' ', $blockers));
+        }
+
+        try {
+            $this->ebay->publish($item);
+        } catch (\Throwable $e) {
+            $this->logger->error('priceit: could not list on eBay', [
+                'item' => $item->getId(),
+                'sku' => $item->getSku(),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+
+        $this->em->flush();
     }
 }

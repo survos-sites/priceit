@@ -7,12 +7,14 @@ namespace App\Controller\Admin;
 use App\Entity\Item;
 use App\Repository\ItemRepository;
 use App\Service\DepotPrintClient;
+use App\Service\EbayListingPublisher;
 use App\Service\PricingSuggestionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Survos\MarketplaceContracts\Exception\MarketplaceException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /** Review/pricing surface: browse captured items, edit AI-suggested title/description/price. */
@@ -29,13 +31,54 @@ final class ItemController extends AbstractController
     }
 
     #[Route('/items/{id}', name: 'item_show')]
-    public function show(Item $item, PricingSuggestionService $pricing, DepotPrintClient $depot): Response
-    {
+    public function show(
+        Item $item,
+        PricingSuggestionService $pricing,
+        DepotPrintClient $depot,
+        EbayListingPublisher $ebay,
+    ): Response {
         return $this->render('admin/item/show.html.twig', [
             'item' => $item,
             'aiConfigured' => $pricing->isConfigured(),
             'depotConfigured' => $depot->isConfigured(),
+            'ebayConfigured' => $ebay->isAvailable(),
+            // Shown next to a disabled button, so "why can't I click this" is
+            // answered on the page rather than in the logs.
+            'ebayBlockers' => $ebay->blockers($item),
         ]);
+    }
+
+    /**
+     * Put the item on eBay.
+     *
+     * Synchronous, unlike the workflow's async `list` transition: someone pressed a
+     * button and is looking at the screen, and "it might appear on eBay shortly" is
+     * a poor answer for an action that publishes something publicly.
+     */
+    #[Route('/items/{id}/list-on-ebay', name: 'item_list_ebay', methods: ['POST'])]
+    public function listOnEbay(Item $item, Request $request, EbayListingPublisher $ebay): Response
+    {
+        if (!$this->isCsrfTokenValid('item_list_ebay_'.$item->getId(), (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $blockers = $ebay->blockers($item);
+        if ([] !== $blockers) {
+            $this->addFlash('danger', implode(' ', $blockers));
+
+            return $this->redirectToRoute('admin_item_show', ['id' => $item->getId()]);
+        }
+
+        try {
+            $ebay->publish($item, $request->request->getString('categoryId') ?: null);
+            $this->addFlash('success', sprintf('Listed on eBay: %s', $item->getEbayUrl() ?? $item->getEbayOfferId()));
+        } catch (MarketplaceException $e) {
+            // eBay's rejections name the field and the accepted values; passing the
+            // message through beats "could not list".
+            $this->addFlash('danger', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_item_show', ['id' => $item->getId()]);
     }
 
     /** Photo in, title/description/price out. */

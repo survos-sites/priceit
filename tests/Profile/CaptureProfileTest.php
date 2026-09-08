@@ -28,6 +28,13 @@ final class CaptureProfileTest extends TestCase
         self::assertTrue(CaptureProfile::MedicalEquipment->publishesToQuickbase());
     }
 
+    public function testOnlyAuctionLotsGoToEbay(): void
+    {
+        self::assertTrue(CaptureProfile::Auction->listsOnEbay());
+        // Loan-closet equipment is lent out free; selling it would be incoherent.
+        self::assertFalse(CaptureProfile::MedicalEquipment->listsOnEbay());
+    }
+
     public function testTheMedicalPromptRefusesToAskForAValue(): void
     {
         // The closet lends equipment at no charge. A prompt that invites a price invites a

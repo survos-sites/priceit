@@ -42,7 +42,12 @@
         </label>
 
         <label class="capture-print">
-            <input type="checkbox" {{ stimulus_target('capture', 'printToggle') }} checked>
+            {# Default OFF. depot->isConfigured() only proves DEPOT_BASE_URL is set, not
+               that a Zebra is plugged into it -- and pre-checking this when nothing can
+               print advances the item through `tag` toward a label that never comes out,
+               leaving it marked tagged with nothing in anyone's hand. Ticking it is a
+               deliberate choice; printing later from the admin screen always works. #}
+            <input type="checkbox" {{ stimulus_target('capture', 'printToggle') }}>
             <span>Print the label as soon as it is described</span>
         </label>
 

@@ -1,0 +1,22 @@
+survos_marketplace:
+    ebay:
+        client_id: '%env(EBAY_CLIENT_ID)%'
+        client_secret: '%env(EBAY_CLIENT_SECRET)%'
+        # eBay's redirect-URI ALIAS from the developer portal, not a URL.
+        ru_name: '%env(EBAY_RU_NAME)%'
+
+    connections:
+        # Dave's store. The business policy ids and location key come from his
+        # seller account after he authorizes the app -- they are not secrets, but
+        # they are per-seller, so they live in env rather than here.
+        dave:
+            driver: ebay
+            site: EBAY_US
+            # eBay's sandbox is a separate world: separate keyset, separate test
+            # users, separate data. Flip to false only when going live for real.
+            sandbox: true
+            options:
+                merchant_location_key: '%env(default::EBAY_LOCATION_KEY)%'
+                fulfillment_policy_id: '%env(default::EBAY_FULFILLMENT_POLICY)%'
+                payment_policy_id: '%env(default::EBAY_PAYMENT_POLICY)%'
+                return_policy_id: '%env(default::EBAY_RETURN_POLICY)%'

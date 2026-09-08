@@ -36,4 +36,5 @@ return [
     KnpU\OAuth2ClientBundle\KnpUOAuth2ClientBundle::class => ['all' => true],
     Survos\AuthBundle\SurvosAuthBundle::class => ['all' => true],
     Survos\RecordStoreBundle\SurvosRecordStoreBundle::class => ['all' => true],
+    Survos\MarketplaceBundle\SurvosMarketplaceBundle::class => ['all' => true],
 ];

@@ -69,6 +69,23 @@ enum CaptureProfile: string
     }
 
     /**
+     * Whether this item can be listed on eBay.
+     *
+     * Loan-closet equipment cannot: it is lent out free, and the profile already
+     * tells the model not to price it.
+     *
+     * NOTE the tension for auction lots. promptGuidance() asks for a folding-table
+     * price -- "cheap and someone wants them today" -- which is the wrong number to
+     * put on eBay, where the comparable is what a thing actually fetches online.
+     * Listing is therefore a deliberate act on an item whose price a person has
+     * already confirmed, never an automatic consequence of the AI suggestion.
+     */
+    public function listsOnEbay(): bool
+    {
+        return self::Auction === $this;
+    }
+
+    /**
      * Prompt for the spoken or typed note.
      *
      * Asking a volunteer what a loaned wheelchair is "worth" would contradict the profile that

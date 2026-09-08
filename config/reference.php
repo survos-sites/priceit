@@ -1121,7 +1121,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             limiter?: scalar|Param|null, // A service id implementing "Symfony\Component\HttpFoundation\RateLimiter\RequestRateLimiterInterface".
  *             max_attempts?: int|Param, // Default: 5
  *             interval?: scalar|Param|null, // Default: "1 minute"
- *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by the login rate limiter (or null to disable locking). // Default: null
+ *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by the login rate limiter ("auto" to use the default one when the Lock component is configured, or null to disable locking). // Default: "auto"
  *             cache_pool?: string|Param, // The cache pool to use for storing the limiter state // Default: "cache.rate_limiter"
  *             storage_service?: string|Param, // The service ID of a custom storage implementation, this precedes any configured "cache_pool" // Default: null
  *         },
@@ -1311,9 +1311,9 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             lifetime?: int|Param, // Default: 31536000
  *             path?: scalar|Param|null, // Default: "/"
  *             domain?: scalar|Param|null, // Default: null
- *             secure?: true|false|"auto"|Param, // Default: false
+ *             secure?: true|false|"auto"|Param, // Default: "auto"
  *             httponly?: bool|Param, // Default: true
- *             samesite?: null|"lax"|"strict"|"none"|Param, // Default: null
+ *             samesite?: null|"lax"|"strict"|"none"|Param, // Default: "lax"
  *             always_remember_me?: bool|Param, // Default: false
  *             remember_me_parameter?: scalar|Param|null, // Default: "_remember_me"
  *         },
@@ -1830,6 +1830,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         collect_components?: bool|Param, // Collect components instances // Default: true
  *     },
  * }
+ * @psalm-type SurvosKitConfig = array{
+ *     webhook?: array{
+ *         http_client?: scalar|Param|null, // Default: null
+ *         transports?: list<scalar|Param|null>,
+ *     },
+ * }
  * @psalm-type KnpMenuConfig = array{
  *     providers?: array{
  *         builder_alias?: bool|Param, // Default: true
@@ -2314,6 +2320,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         logo_small?: scalar|Param|null, // Default: null
  *         homepage_route?: scalar|Param|null, // Default: null
  *         homepage_url?: scalar|Param|null, // Default: null
+ *         tunnel_host?: scalar|Param|null, // Default: "%env(default::TUNNEL_HOST)%"
+ *         local_host?: scalar|Param|null, // Default: "%env(default::APP_BASE_URL)%"
  *         links?: array{
  *             github?: scalar|Param|null, // Default: null
  *             docs?: scalar|Param|null, // Default: null
@@ -2397,6 +2405,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     queue_prefix?: scalar|Param|null, // Default: ""
  *     base_layout?: scalar|Param|null, // Default: "base.html.twig"
  *     enable_dynamic_routing?: bool|Param, // Default: true
+ *     allow_force_place?: scalar|Param|null, // Default: "%kernel.debug%"
  *     workflow_paths?: list<scalar|Param|null>,
  *     async_transport_dsn?: scalar|Param|null, // Default: "doctrine://default"
  *     queue_driver?: "doctrine"|"rabbitmq"|Param, // Default: "doctrine"
@@ -2616,6 +2625,20 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     }>,
  * }
+ * @psalm-type SurvosMarketplaceConfig = array{
+ *     token_dir?: scalar|Param|null, // Where FileTokenStore keeps OAuth tokens. One JSON file per connection; keep it out of the webroot and out of git. // Default: "%kernel.project_dir%/var/marketplace-tokens"
+ *     ebay?: array{ // eBay application keyset. Sandbox and production keysets are separate and not interchangeable.
+ *         client_id?: scalar|Param|null, // Default: null
+ *         client_secret?: scalar|Param|null, // Default: null
+ *         ru_name?: scalar|Param|null, // eBay's redirect-URI ALIAS, not a URL. Passing the URL fails as an unhelpful invalid_request. // Default: null
+ *     },
+ *     connections?: array<string, array{ // Default: []
+ *         driver?: "ebay"|"mercadolibre"|Param,
+ *         site?: scalar|Param|null, // Provider marketplace id: EBAY_US, or an ML site such as MLM (Mexico).
+ *         sandbox?: bool|Param, // eBay only. Mercado Libre has no sandbox and the adapter refuses this rather than publishing to production. // Default: false
+ *         options?: mixed, // Driver options. eBay needs merchant_location_key plus the three business policy ids. // Default: []
+ *     }>,
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2632,6 +2655,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     api_platform?: ApiPlatformConfig,
  *     vich_uploader?: VichUploaderConfig,
  *     twig_component?: TwigComponentConfig,
+ *     survos_kit?: SurvosKitConfig,
  *     knp_menu?: KnpMenuConfig,
  *     survos_fw?: SurvosFwConfig,
  *     pwa?: PwaConfig,
@@ -2647,6 +2671,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *     survos_auth?: SurvosAuthConfig,
  *     survos_record_store?: SurvosRecordStoreConfig,
+ *     survos_marketplace?: SurvosMarketplaceConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2666,6 +2691,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         api_platform?: ApiPlatformConfig,
  *         vich_uploader?: VichUploaderConfig,
  *         twig_component?: TwigComponentConfig,
+ *         survos_kit?: SurvosKitConfig,
  *         knp_menu?: KnpMenuConfig,
  *         survos_fw?: SurvosFwConfig,
  *         pwa?: PwaConfig,
@@ -2682,6 +2708,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *         survos_record_store?: SurvosRecordStoreConfig,
+ *         survos_marketplace?: SurvosMarketplaceConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2699,6 +2726,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         api_platform?: ApiPlatformConfig,
  *         vich_uploader?: VichUploaderConfig,
  *         twig_component?: TwigComponentConfig,
+ *         survos_kit?: SurvosKitConfig,
  *         knp_menu?: KnpMenuConfig,
  *         survos_fw?: SurvosFwConfig,
  *         pwa?: PwaConfig,
@@ -2714,6 +2742,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *         survos_record_store?: SurvosRecordStoreConfig,
+ *         survos_marketplace?: SurvosMarketplaceConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2732,6 +2761,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         api_platform?: ApiPlatformConfig,
  *         vich_uploader?: VichUploaderConfig,
  *         twig_component?: TwigComponentConfig,
+ *         survos_kit?: SurvosKitConfig,
  *         knp_menu?: KnpMenuConfig,
  *         survos_fw?: SurvosFwConfig,
  *         pwa?: PwaConfig,
@@ -2748,6 +2778,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         knpu_oauth2_client?: KnpuOauth2ClientConfig,
  *         survos_auth?: SurvosAuthConfig,
  *         survos_record_store?: SurvosRecordStoreConfig,
+ *         survos_marketplace?: SurvosMarketplaceConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,
