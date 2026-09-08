@@ -53,8 +53,15 @@ class ItemFlow
     public const PLACE_LISTED = 'listed';
 
     #[Place(
-        info: 'The suggestion could not be made — usually an unreadable photo or a missing API key. Fixable, then retry.',
-        next: [self::TRANSITION_SUGGEST],
+        info: 'The suggestion could not be made — usually an unreadable photo or a missing API key. Fixable, then retry by hand.',
+        // Deliberately NO `next`. WorkflowListener drives `next` from the `entered`
+        // event, so next: [TRANSITION_SUGGEST] here means "on failing, immediately
+        // try again" -- and a failure that is not transient then loops forever. A
+        // null API key produced 3850 queued messages in five minutes that way.
+        //
+        // The word "retry" in the description is a human retry: `suggest` still
+        // accepts `failed` as a from-place, so the admin button and the CLI both
+        // work. What is gone is the automatic re-entry.
     )]
     public const PLACE_FAILED = 'failed';
 
