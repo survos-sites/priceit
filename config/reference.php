@@ -2633,7 +2633,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         ru_name?: scalar|Param|null, // eBay's redirect-URI ALIAS, not a URL. Passing the URL fails as an unhelpful invalid_request. // Default: null
  *     },
  *     connections?: array<string, array{ // Default: []
- *         driver?: "ebay"|"mercadolibre"|Param,
+ *         driver?: "ebay"|"mercadolibre"|"etsy"|Param,
  *         site?: scalar|Param|null, // Provider marketplace id: EBAY_US, or an ML site such as MLM (Mexico).
  *         sandbox?: bool|Param, // eBay only. Mercado Libre has no sandbox and the adapter refuses this rather than publishing to production. // Default: false
  *         options?: mixed, // Driver options. eBay needs merchant_location_key plus the three business policy ids. // Default: []

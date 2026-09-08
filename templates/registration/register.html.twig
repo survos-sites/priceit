@@ -12,8 +12,9 @@
     {{ form_errors(registrationForm) }}
 
     {# Bootstrap is the global default (admin path); these two pages live in the F7 shell,
-       which has no Bootstrap CSS and must not gain any. #}
-    {% form_theme registrationForm 'form/f7_layout.html.twig' %}
+       which has no Bootstrap CSS and must not gain any. The theme ships with fw-bundle so
+       the next F7 app does not rewrite it. #}
+    {% form_theme registrationForm '@SurvosFw/form/f7_layout.html.twig' %}
 
     {{ form_start(registrationForm) }}
         {{ form_row(registrationForm.email) }}
