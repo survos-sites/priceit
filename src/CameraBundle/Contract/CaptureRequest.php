@@ -20,6 +20,17 @@ final class CaptureRequest
         public readonly array $photos,
         public readonly ?UploadedFile $audio,
         public readonly array $metadata = [],
+        /**
+         * Photos already PUT straight to S3, as public URLs.
+         *
+         * The bytes never reach us in this path, so there is nothing to store —
+         * only a reference to record. $photos stays for clients that cannot
+         * presign (no credentials configured), and the two are additive rather
+         * than exclusive: a retry that half-succeeded can send some of each.
+         *
+         * @var list<string>
+         */
+        public readonly array $photoUrls = [],
     ) {
     }
 }

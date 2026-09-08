@@ -47,6 +47,25 @@ class Media
     #[ORM\Column(nullable: true)]
     private ?int $size = null;
 
+    /**
+     * For images that live somewhere else and should stay there.
+     *
+     * A phone capture is uploaded and Vich owns the bytes. A scan imported from
+     * ssai is already in S3 behind imgproxy, with a durable public URL — copying it
+     * into priceit's bucket would duplicate storage, add a failure mode, and pin a
+     * second copy to whichever machine did the import.
+     *
+     * When this is set, it wins: getUrl() returns it and Vich is not consulted.
+     */
+    #[ORM\Column(length: 1024, nullable: true)]
+    #[Groups(['item:read'])]
+    private ?string $sourceUrl = null;
+
+    /** Where an imported image came from, e.g. "ssai:dave:item-01JB…". Provenance, not a key. */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['item:read'])]
+    private ?string $sourceRef = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -133,5 +152,35 @@ class Media
         $this->size = $size;
 
         return $this;
+    }
+
+    public function getSourceUrl(): ?string
+    {
+        return $this->sourceUrl;
+    }
+
+    public function setSourceUrl(?string $sourceUrl): static
+    {
+        $this->sourceUrl = $sourceUrl;
+
+        return $this;
+    }
+
+    public function getSourceRef(): ?string
+    {
+        return $this->sourceRef;
+    }
+
+    public function setSourceRef(?string $sourceRef): static
+    {
+        $this->sourceRef = $sourceRef;
+
+        return $this;
+    }
+
+    /** True when the bytes live elsewhere and this row only points at them. */
+    public function isExternal(): bool
+    {
+        return null !== $this->sourceUrl && '' !== $this->sourceUrl;
     }
 }

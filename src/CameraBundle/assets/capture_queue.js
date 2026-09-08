@@ -34,6 +34,7 @@ export class CaptureQueue {
   /** @param {{ endpoint: string, concurrency?: number }} opts */
   constructor(opts = {}) {
     this.endpoint = opts.endpoint || '/api/camera/capture';
+    this.presignEndpoint = opts.presignEndpoint || '/api/camera/upload-urls';
     this.concurrency = opts.concurrency || 1;
     this.db = new CaptureDb();
     this._running = false;
@@ -138,15 +139,81 @@ export class CaptureQueue {
     }
   }
 
+  /**
+   * Ask the server for presigned S3 URLs and PUT the photos straight there.
+   *
+   * Returns the public URLs on success, or null when the server says S3 is not
+   * configured — a dev laptop without credentials answers 503 and we post the
+   * bytes the old way instead.
+   *
+   * Any failure falls back rather than throwing. A photo that reached S3 but whose
+   * capture POST then failed is harmless: the key is derived from the client id,
+   * so a retry overwrites the same object instead of littering the bucket.
+   *
+   * @returns {Promise<string[]|null>}
+   */
+  async _uploadDirect(clientId, photos) {
+    let grants;
+
+    try {
+      const resp = await fetch(this.presignEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          content_types: photos.map((b) => b.type || 'image/jpeg'),
+        }),
+      });
+
+      if (!resp.ok) {
+        return null;                       // 503 = no S3 configured; use multipart
+      }
+
+      grants = (await resp.json()).uploads ?? [];
+    } catch {
+      return null;
+    }
+
+    if (grants.length !== photos.length) {
+      return null;
+    }
+
+    try {
+      await Promise.all(grants.map((grant, i) => fetch(grant.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': photos[i].type || 'image/jpeg' },
+        body: photos[i],
+      }).then((r) => {
+        if (!r.ok) {
+          throw new Error(`S3 ${r.status}`);
+        }
+      })));
+    } catch {
+      // Half-uploaded is fine to abandon: same keys next time.
+      return null;
+    }
+
+    return grants.map((g) => g.publicUrl);
+  }
+
   async _upload(capture) {
     const { photos, audio, metadata, clientId } = capture;
 
+    // Straight to S3 when we can. The bytes then never cross the web process,
+    // which is the slowest hop from a phone and the one with a body-size limit.
+    const uploaded = photos.length > 0 ? await this._uploadDirect(clientId, photos) : [];
+
     const form = new FormData();
     form.append('client_id', clientId);
-    photos.forEach((blob, i) => {
-      const ext = blob.type === 'image/png' ? 'png' : 'jpg';
-      form.append('photos[]', blob, `photo-${i}.${ext}`);
-    });
+
+    if (uploaded === null) {
+      photos.forEach((blob, i) => {
+        const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+        form.append('photos[]', blob, `photo-${i}.${ext}`);
+      });
+    } else {
+      uploaded.forEach((url) => form.append('photo_urls[]', url));
+    }
     if (audio) {
       const ext = audio.type === 'audio/webm' ? 'webm' : 'ogg';
       form.append('audio', audio, `note.${ext}`);

@@ -341,13 +341,21 @@ final class MarketplaceListingPublisher
      */
     private function imageUrls(Item $item): array
     {
-        if (null === $this->storage) {
-            return [];
-        }
-
         $urls = [];
         foreach ($item->getPhotos() as $photo) {
-            $uri = $this->storage->resolveUri($photo, 'file');
+            // An imported scan already lives in S3 behind imgproxy with a durable
+            // public URL. Vich knows nothing about it, and re-hosting it here would
+            // duplicate storage for no gain.
+            if ($photo->isExternal()) {
+                $url = (string) $photo->getSourceUrl();
+                if (str_starts_with($url, 'https://')) {
+                    $urls[] = $url;
+                }
+
+                continue;
+            }
+
+            $uri = $this->storage?->resolveUri($photo, 'file');
             if (null === $uri || '' === $uri) {
                 continue;
             }

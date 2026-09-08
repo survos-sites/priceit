@@ -58,6 +58,15 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
             $item->setTranscript(trim($transcript));
         }
 
+        // Photos already in S3: record the reference, store nothing. Same shape as
+        // an imported ssai scan, so downstream cannot tell them apart.
+        foreach ($request->photoUrls as $url) {
+            $media = new Media(MediaKind::Photo);
+            $media->setSourceUrl($url);
+            $item->addMedia($media);
+            $this->em->persist($media);
+        }
+
         foreach ($request->photos as $photo) {
             $item->addMedia($this->buildMedia(MediaKind::Photo, $photo));
         }
