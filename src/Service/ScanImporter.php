@@ -181,6 +181,14 @@ final readonly class ScanImporter
             }
             $item->setAttributes($this->attributesFrom($mapped));
 
+            // Stored, but deliberately NOT used to set the price: what an item is
+            // worth is ssai's guess, what it costs is Dave's decision. The two stay
+            // apart until someone chooses a confidence threshold worth trusting.
+            $values = $mapped['values'] ?? [];
+            if (is_array($values) && [] !== $values) {
+                $item->setValueEstimates($values);
+            }
+
             $existing = [];
             foreach ($item->getMedia() as $media) {
                 if ($media->isExternal()) {

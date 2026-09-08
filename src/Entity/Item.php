@@ -149,6 +149,23 @@ class Item
     #[Groups(['item:read'])]
     private array $attributes = [];
 
+    /**
+     * What the item is worth, per selling situation, as ssai estimated it.
+     *
+     * Deliberately NOT the price. A price is a decision someone made; these are
+     * guesses from photographs, and a guess written into a price field is
+     * indistinguishable from a decision a week later. Keeping them apart is what
+     * lets the UI show "we think $8-15" next to an empty price box.
+     *
+     * Separate from attributes because that is the marketplace-facing bag and is
+     * flat by contract; these are nested and no marketplace wants them.
+     *
+     * @var array<string, array{low: string, high: string, currency: string, confidence: float, basis: ?string}>
+     */
+    #[ORM\Column(options: ['default' => '{}'])]
+    #[Groups(['item:read'])]
+    private array $valueEstimates = [];
+
     /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['item:read'])]
@@ -432,5 +449,38 @@ class Item
         $tags = $this->attributes['tags'] ?? [];
 
         return is_array($tags) ? array_values(array_filter($tags, 'is_string')) : [];
+    }
+
+    /** @return array<string, array{low: string, high: string, currency: string, confidence: float, basis: ?string}> */
+    public function getValueEstimates(): array
+    {
+        return $this->valueEstimates;
+    }
+
+    /** @param array<string, array{low: string, high: string, currency: string, confidence: float, basis: ?string}> $estimates */
+    public function setValueEstimates(array $estimates): self
+    {
+        $this->valueEstimates = $estimates;
+
+        return $this;
+    }
+
+    /**
+     * The estimate for how this item is actually being sold, if there is one.
+     *
+     * CaptureProfile already splits garage-sale from resale, so the profile is the
+     * right thing to key on -- asking a caller to name the situation would let the
+     * two drift apart.
+     *
+     * @return array{low: string, high: string, currency: string, confidence: float, basis: ?string}|null
+     */
+    public function getValueEstimateForProfile(): ?array
+    {
+        $situation = match ($this->profile) {
+            CaptureProfile::GarageSale => 'garageSale',
+            default => 'resale',
+        };
+
+        return $this->valueEstimates[$situation] ?? null;
     }
 }

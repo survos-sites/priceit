@@ -61,7 +61,8 @@ final readonly class ClaimMapper
      *     title: ?string, description: ?string, date: ?string, whenMade: ?string,
      *     tags: list<string>, place: ?string, landmark: ?string, city: ?string, state: ?string,
      *     stateCode: ?string, country: ?string, ocr: ?string, type: ?string,
-     *     estimatedValue: ?string, valueConfidence: ?string
+     *     estimatedValue: ?string, valueConfidence: ?string,
+     *     values: array<string, array{low: string, high: string, currency: string, confidence: float, basis: ?string}>
      * }
      */
     /**
@@ -140,6 +141,7 @@ final readonly class ClaimMapper
             // starts emitting it there is nothing to change here.
             'estimatedValue' => $this->firstValue($byPredicate['schema:price'] ?? []),
             'valueConfidence' => $this->confidenceOf($byPredicate['schema:price'] ?? []),
+            'values' => $this->valuesFrom($byPredicate['schema:value'] ?? []),
             'synthesisNotes' => null,
             'people' => [],
         ];
@@ -352,6 +354,53 @@ final readonly class ClaimMapper
         }
 
         return $best;
+    }
+
+        /**
+     * Situational value estimates, keyed by situation.
+     *
+     * Keyed rather than a list because every consumer wants one specific situation --
+     * a resale listing has no use for the garage-sale figure, and scanning a list for
+     * it at each call site is how the wrong one eventually gets used.
+     *
+     * ssai has already validated these on the way in; this only has to survive an
+     * older item whose metadata predates the field, or a hand-edited one.
+     *
+     * @param list<array<string, mixed>> $claims
+     *
+     * @return array<string, array{low: string, high: string, currency: string, confidence: float, basis: ?string}>
+     */
+    private function valuesFrom(array $claims): array
+    {
+        $values = [];
+
+        foreach ($claims as $claim) {
+            $value = $claim['value'] ?? null;
+            if (!is_array($value)) {
+                continue;
+            }
+
+            $situation = $value['situation'] ?? null;
+            $low = $value['low'] ?? null;
+            $high = $value['high'] ?? null;
+            $currency = $value['currency'] ?? null;
+            $confidence = $value['confidence'] ?? null;
+
+            if (!is_string($situation) || !is_string($low) || !is_string($high)
+                || !is_string($currency) || !is_numeric($confidence)) {
+                continue;
+            }
+
+            $values[$situation] = [
+                'low' => $low,
+                'high' => $high,
+                'currency' => $currency,
+                'confidence' => (float) $confidence,
+                'basis' => is_string($value['basis'] ?? null) ? $value['basis'] : null,
+            ];
+        }
+
+        return $values;
     }
 
     /** @param list<array<string, mixed>> $claims */
