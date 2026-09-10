@@ -49,6 +49,18 @@ export default class extends Controller {
     }
 
     this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
+
+    // Let go of the camera whenever this tab is out of sight. Android Chrome gives the camera
+    // to one tab at a time, and a capture tab left open in the background was holding it, so
+    // the Price it page showed a black screen.
+    this._onVisibility = () => {
+      if (document.hidden) {
+        this.camera.close();
+      } else {
+        this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
+      }
+    };
+    document.addEventListener('visibilitychange', this._onVisibility);
   }
 
   printChanged() {
@@ -65,6 +77,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener('visibilitychange', this._onVisibility);
     this.camera.close();
     this.audio.cancel();
     if (this.speech.isListening) this.speech.stop();

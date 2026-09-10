@@ -36,17 +36,30 @@ export default class extends Controller {
     }
 
     async openCamera() {
+        // Two opens racing (load, then the tab coming back into view) would leave the first
+        // stream running with nothing holding it, keeping the camera busy for everyone else.
+        if (this.opening) return this.opening;
         this.cameraErrorTarget.hidden = true;
-        try {
-            await this.camera.open(this.videoTarget);
-            const track = this.camera.stream?.getVideoTracks()[0];
-            this.torchTarget.hidden = !track?.getCapabilities?.().torch;
-            this.torchOn = false;
-            this.torchTarget.classList.remove('on');
-        } catch (err) {
-            this.cameraErrorTarget.textContent = `No live camera (${err.message}). Use "Camera app" below instead.`;
-            this.cameraErrorTarget.hidden = false;
-        }
+        this.opening = (async () => {
+            try {
+                await this.camera.open(this.videoTarget);
+                const track = this.camera.stream?.getVideoTracks()[0];
+                this.torchTarget.hidden = !track?.getCapabilities?.().torch;
+                this.torchOn = false;
+                this.torchTarget.classList.remove('on');
+            } catch (err) {
+                this.cameraErrorTarget.textContent = cameraProblem(err);
+                this.cameraErrorTarget.hidden = false;
+            } finally {
+                this.opening = null;
+            }
+        })();
+        return this.opening;
+    }
+
+    retryCamera() {
+        this.camera.close();
+        this.openCamera();
     }
 
     async toggleTorch() {
@@ -150,6 +163,24 @@ export default class extends Controller {
                 <p class="lk-why">${esc(d.why)}</p>
                 <p class="lk-desc">${esc(d.description)}</p>
             </div>`;
+    }
+}
+
+/** Say which of the usual three it is, since each has a different fix. */
+function cameraProblem(err) {
+    switch (err?.name) {
+        case 'NotReadableError':
+        case 'TrackStartError':
+        case 'AbortError':
+            return 'The camera is busy: another tab or app has it. Close other PriceIt or camera tabs, then tap here to try again. Or use "Camera app" below.';
+        case 'NotAllowedError':
+        case 'SecurityError':
+            return 'Camera access is blocked for this site. Tap the icon left of the address, allow Camera, then tap here. Or use "Camera app" below.';
+        case 'NotFoundError':
+        case 'OverconstrainedError':
+            return 'No camera found. Use "Camera app" or "Photos" below.';
+        default:
+            return `No live camera (${err?.message || err}). Tap here to try again, or use "Camera app" below.`;
     }
 }
 

@@ -71,7 +71,7 @@
         <video data-lookup-target="video" playsinline muted autoplay></video>
         <p class="lk-hint">Fill the screen with the item, maker's mark or tag included</p>
         <button type="button" class="lk-torch" hidden data-lookup-target="torch" data-action="lookup#toggleTorch" aria-label="Flashlight">🔦</button>
-        <p class="lk-error" hidden data-lookup-target="cameraError"></p>
+        <p class="lk-error" hidden data-lookup-target="cameraError" data-action="click->lookup#retryCamera"></p>
 
         <div class="lk-bottom">
             <label class="lk-side"><span>🖼️</span>Photos
