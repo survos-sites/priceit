@@ -2,6 +2,14 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # Dokku's nginx terminates TLS and forwards plain http. Without trusting it, Symfony
+    # built http:// redirects, so /capture sent anonymous visitors to http://…/login. The
+    # service worker precaches /capture as its offline page, and that mixed-content
+    # redirect failed its install. With no service worker, Chrome stopped offering to
+    # install the app.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-host']
+
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
