@@ -1,108 +1,155 @@
 import { Controller } from '@hotwired/stimulus';
+import { Camera } from 'camera-bundle/camera';
 
 /*
- * Quick lookup: photos in, "what is it and what should we charge" out.
+ * Price it: camera -> "Researching..." -> the answer -> back to the camera.
  *
- * The request is answered while the phone waits. No outbox, because nothing is saved:
- * if it fails, the person presses the button again.
+ * One photo per item, sent the moment it is taken. The request is answered while the phone
+ * waits, and the server keeps the photo and the answer as an item for next year's comparison.
+ *
+ * The camera is released whenever this page is not showing the viewfinder (researching, the
+ * answer, the tab in the background), so a PriceIt tab left open elsewhere does not hold it.
  */
-const MAX_PHOTOS = 3;
 // Claude reads images at about this size, so sending more only costs upload time on a hotspot.
 const MAX_EDGE = 1568;
 
 export default class extends Controller {
-    static targets = ['form', 'thumbs', 'note', 'ask', 'status', 'result'];
+    static targets = ['cameraStep', 'video', 'torch', 'cameraError', 'researchStep', 'preview', 'spinner',
+        'status', 'retry', 'resultStep', 'resultPhoto', 'result'];
     static values = { url: String };
 
     connect() {
-        this.photos = [];
+        this.camera = new Camera();
+        this.torchOn = false;
+        this.onVisibility = () => {
+            if (document.hidden) this.camera.close();
+            else if (!this.cameraStepTarget.hidden) this.openCamera();
+        };
+        document.addEventListener('visibilitychange', this.onVisibility);
+        this.openCamera();
     }
 
-    async add(event) {
-        const files = [...event.target.files];
-        event.target.value = ''; // the same photo can be picked again after removing it
-        for (const file of files) {
-            if (this.photos.length >= MAX_PHOTOS) break;
-            this.photos.push(await shrink(file));
+    disconnect() {
+        document.removeEventListener('visibilitychange', this.onVisibility);
+        clearInterval(this.timer);
+        this.camera.close();
+    }
+
+    async openCamera() {
+        this.cameraErrorTarget.hidden = true;
+        try {
+            await this.camera.open(this.videoTarget);
+            const track = this.camera.stream?.getVideoTracks()[0];
+            this.torchTarget.hidden = !track?.getCapabilities?.().torch;
+            this.torchOn = false;
+            this.torchTarget.classList.remove('on');
+        } catch (err) {
+            this.cameraErrorTarget.textContent = `No live camera (${err.message}). Use "Camera app" below instead.`;
+            this.cameraErrorTarget.hidden = false;
         }
-        this.render();
     }
 
-    remove(event) {
-        this.photos.splice(Number(event.currentTarget.dataset.index), 1);
-        this.render();
+    async toggleTorch() {
+        const track = this.camera.stream?.getVideoTracks()[0];
+        if (!track) return;
+        this.torchOn = !this.torchOn;
+        try {
+            await track.applyConstraints({ advanced: [{ torch: this.torchOn }] });
+            this.torchTarget.classList.toggle('on', this.torchOn);
+        } catch {
+            this.torchOn = false;
+            this.torchTarget.hidden = true;
+        }
     }
 
-    render() {
-        this.thumbsTarget.innerHTML = this.photos.map((blob, i) => `
-            <div class="thumb">
-                <img src="${URL.createObjectURL(blob)}" alt="">
-                <button type="button" data-action="lookup#remove" data-index="${i}">✕</button>
-            </div>`).join('');
-        this.askTarget.disabled = this.photos.length === 0;
+    async shoot() {
+        if (!this.camera.stream) return;
+        let blob;
+        try {
+            blob = await this.camera.capture(0.9);
+        } catch (err) {
+            this.cameraErrorTarget.textContent = `Could not take the photo: ${err.message}`;
+            this.cameraErrorTarget.hidden = false;
+            return;
+        }
+        this.camera.close();
+        this.photo = await shrink(blob);
+        this.send();
     }
 
-    async ask() {
-        if (this.photos.length === 0) return;
+    async pick(event) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        this.camera.close();
+        this.photo = await shrink(file);
+        this.send();
+    }
+
+    async send() {
+        if (!this.photo) return;
+        this.show('research');
+        this.previewTarget.src = this.photoUrl();
+        this.spinnerTarget.hidden = false;
+        this.retryTarget.hidden = true;
+
+        const started = Date.now();
+        const tick = () => { this.statusTarget.textContent = `Researching… ${Math.round((Date.now() - started) / 1000)}s`; };
+        tick();
+        clearInterval(this.timer);
+        this.timer = setInterval(tick, 1000);
 
         const form = new FormData();
-        this.photos.forEach((blob, i) => form.append('photos[]', blob, `photo-${i}.jpg`));
-        form.append('note', this.noteTarget.value.trim());
-
-        this.askTarget.disabled = true;
-        const started = Date.now();
-        const tick = () => {
-            this.statusTarget.textContent = `Looking up… ${Math.round((Date.now() - started) / 1000)}s`;
-        };
-        tick();
-        this.timer = setInterval(tick, 1000);
+        form.append('photos[]', this.photo, 'photo.jpg');
 
         try {
             const response = await fetch(this.urlValue, { method: 'POST', body: form });
             const answer = await response.json().catch(() => ({ ok: false, message: `The server answered ${response.status}.` }));
             if (!answer.ok) throw new Error(answer.message || 'No answer came back.');
-            this.show(answer.data);
+            this.render(answer.data);
+            this.show('result');
         } catch (err) {
-            this.statusTarget.textContent = navigator.onLine
-                ? `Didn't work: ${err.message} Press Price it! to try again.`
-                : 'No connection. Press Price it! again once you are back online.';
-            this.askTarget.disabled = false;
+            this.spinnerTarget.hidden = true;
+            this.statusTarget.textContent = navigator.onLine ? `Didn't work: ${err.message}` : 'No connection.';
+            this.retryTarget.hidden = false;
         } finally {
             clearInterval(this.timer);
         }
     }
 
-    show(d) {
-        const money = (n) => `$${Number(n).toFixed(Number(n) % 1 ? 2 : 0)}`;
-        const online = d.onlineLowUsd && d.onlineHighUsd
-            ? `<p class="online">Sells online for <strong>${money(d.onlineLowUsd)}–${money(d.onlineHighUsd)}</strong></p>`
-            : '';
-        this.resultTarget.innerHTML = `
-            <div class="card">
-                <h3>${esc(d.title)}</h3>
-                <span class="confidence ${esc(d.confidence)}">${esc(d.confidence)} confidence</span>
-                <p class="price">${money(d.priceUsd)}</p>
-                <p class="price-note">Friday/Saturday price. Half that on Sunday.</p>
-                ${d.tagPriceUsd > 0 ? `<p class="online">Tag says <strong>${money(d.tagPriceUsd)}</strong></p>` : ''}
-                ${online}
-                <p class="why">${esc(d.why)}</p>
-                <p class="desc">${esc(d.description)}</p>
-            </div>
-            <button type="button" class="again" data-action="lookup#reset">📷 Price the next item</button>`;
-        this.formTarget.hidden = true;
-        this.resultTarget.hidden = false;
-        window.scrollTo(0, 0);
+    next() {
+        this.photo = null;
+        this.show('camera');
+        this.openCamera();
     }
 
-    reset() {
-        this.photos = [];
-        this.noteTarget.value = '';
-        this.render();
-        this.statusTarget.textContent = '';
-        this.resultTarget.hidden = true;
-        this.resultTarget.innerHTML = '';
-        this.formTarget.hidden = false;
-        window.scrollTo(0, 0);
+    show(step) {
+        this.cameraStepTarget.hidden = step !== 'camera';
+        this.researchStepTarget.hidden = step !== 'research';
+        this.resultStepTarget.hidden = step !== 'result';
+        if (step === 'result') this.resultStepTarget.scrollTop = 0;
+    }
+
+    photoUrl() {
+        if (this.photoObjectUrl) URL.revokeObjectURL(this.photoObjectUrl);
+        this.photoObjectUrl = URL.createObjectURL(this.photo);
+        return this.photoObjectUrl;
+    }
+
+    render(d) {
+        const money = (n) => `$${Number(n).toFixed(Number(n) % 1 ? 2 : 0)}`;
+        this.resultPhotoTarget.src = this.photoObjectUrl;
+        this.resultTarget.innerHTML = `
+            <div class="lk-card">
+                <h2>${esc(d.title)}</h2>
+                <span class="lk-conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span>
+                <p class="lk-price">${money(d.priceUsd)}</p>
+                <p class="lk-note">Friday/Saturday price. Half that on Sunday.</p>
+                ${d.tagPriceUsd > 0 ? `<p class="lk-line">Tag says <strong>${money(d.tagPriceUsd)}</strong></p>` : ''}
+                ${d.onlineLowUsd && d.onlineHighUsd ? `<p class="lk-line">Sells online for <strong>${money(d.onlineLowUsd)}–${money(d.onlineHighUsd)}</strong></p>` : ''}
+                <p class="lk-why">${esc(d.why)}</p>
+                <p class="lk-desc">${esc(d.description)}</p>
+            </div>`;
     }
 }
 
@@ -110,7 +157,7 @@ function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
-/** Scale a phone photo down to what the model reads, as JPEG. Falls back to the original. */
+/** Scale a photo down to what the model reads, as JPEG. Falls back to the original. */
 async function shrink(file) {
     try {
         const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
