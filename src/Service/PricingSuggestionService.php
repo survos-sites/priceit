@@ -39,13 +39,13 @@ final class PricingSuggestionService
         'properties' => [
             'title' => [
                 'type' => 'string',
-                'maxLength' => 60,
-                'description' => 'What the thing is, under 32 characters so it fits a price tag. Plain and specific: "Pyrex bowl set", not "Vintage kitchenware collection".',
+                'maxLength' => 80,
+                'description' => 'What the thing is, under 45 characters so it fits a price tag. Plain and specific, and lead with the maker or pattern when there is one: "Pyrex Butterprint bowl set", not "Vintage kitchenware collection".',
             ],
             'description' => [
                 'type' => 'string',
-                'maxLength' => 200,
-                'description' => 'One or two short sentences with a bit of charm, under 100 characters — it has to fit on a price tag. Mention condition if it is visible.',
+                'maxLength' => 240,
+                'description' => 'One or two short sentences with a bit of charm, under 120 characters — it has to fit on a price tag. If the item is collectible, say what makes it so (maker, era, pattern). Mention condition if it is visible.',
             ],
             'category' => [
                 'type' => 'string',
@@ -74,7 +74,7 @@ final class PricingSuggestionService
         'type' => 'number',
         // Structured outputs reject minimum/maximum on number, so the range is stated here
         // and clamped after the fact instead.
-        'description' => 'Suggested garage-sale asking price in US dollars, between 0.50 and 500. Garage-sale pricing, not online pricing.',
+        'description' => 'Friday/Saturday asking price in US dollars, between 0.50 and 1000, as a round number a volunteer can make change for. Fair fundraiser pricing: Sunday is half off, so do not underprice.',
     ];
 
     /**
@@ -84,22 +84,45 @@ final class PricingSuggestionService
      */
     private const RESALE_PRICE_PROPERTY = [
         'type' => 'number',
-        'description' => 'Suggested online asking price in US dollars, between 0.50 and 500, based on what this actually sells for on eBay or Mercado Libre — not what it would fetch on a folding table.',
+        'description' => 'Suggested online asking price in US dollars, between 0.50 and 1000, based on what this actually sells for on eBay or Mercado Libre — not what it would fetch on a folding table.',
     ];
 
+    /**
+     * A fundraiser, not a driveway clear-out. The first version of this prompt said "things
+     * sell because they are cheap", which is right for a garage sale and wrong for a sale whose
+     * point is the money raised: it priced collectibles like mugs. Sunday is half off or make an
+     * offer, so an unsold item gets a second, cheaper chance and Friday's price can be fair.
+     */
     private const SYSTEM_AUCTION = <<<'TXT'
-        You are pricing items for a neighbourhood garage sale. You see photos of one item
-        and sometimes a transcript of the seller talking about it.
+        You are pricing donated items for a weekend fundraising sale run by a local
+        Democratic Party committee. You see photos of one item and sometimes a transcript
+        of a volunteer talking about it.
 
-        Price the way an experienced garage-sale host would: things sell because they are
-        cheap and someone wants them today, not because a comparable sold on eBay last year.
-        Most household items belong between $1 and $20. Reserve higher prices for things
-        that are visibly furniture, tools, electronics that plainly work, or something
-        collectible enough to be obvious from the photo.
+        The price you give is the Friday and Saturday asking price. On Sunday everything is
+        half off or make-an-offer, so there is no need to price low to be sure something
+        sells: anything left gets a second, cheaper chance. The point of the sale is to
+        raise money. Price the way an experienced charity or estate-sale organizer would:
+        a price a buyer recognizes as fair, not a bargain-bin price and not full retail. A
+        donation plainly worth $40 should not go out the door at $5.
 
-        Say what you actually see. If the photo is too dark or too cluttered to identify
-        the item, say so in the description and set confidence to low rather than inventing
-        a plausible object.
+        Look hard for things worth more than they first appear. Before pricing, check the
+        photos for maker's marks, signatures, labels, pattern names, model numbers,
+        hallmarks such as sterling or 14k, edition information, and signs of age. Commonly
+        missed: vintage Pyrex and Fire-King, cast iron (Griswold, Wagner), art and studio
+        pottery, mid-century furniture and lighting, political and campaign memorabilia,
+        vinyl records, first editions, boxed toys and games, brand-name tools, cameras,
+        musical instruments, and jewelry. Price a collectible at what a knowledgeable buyer
+        would pay at a good estate sale, typically 40-60% of what it sells for online, and
+        name what makes it collectible in the title or description so buyers see why.
+
+        Ordinary household goods are still ordinary; a plain mug is still a dollar or two.
+        Use round prices a volunteer can make change for: whole dollars, or $0.50 under $2.
+
+        Say what you actually see. If the photo is too dark or too cluttered to identify the
+        item, or a mark is unreadable, say so in the description and set confidence to low
+        rather than inventing a plausible object. When something might be valuable but you
+        cannot confirm it from the photos, set confidence to low so a volunteer checks it
+        before it goes on the table.
         TXT;
 
     private const SYSTEM_RESALE = <<<'TXT'
@@ -196,11 +219,16 @@ final class PricingSuggestionService
         $content[] = TextBlockParam::with(text: $this->prompt($item));
 
         try {
+            // Opus 5 thinks by default, and thinking tokens count against maxTokens. At the
+            // old 1024 the model had almost no room to look for a maker's mark before
+            // answering. Spotting that a bowl is Fire-King is exactly the step that needs it,
+            // and the call runs on the worker, so the extra seconds cost nobody at the table.
             $message = (new Client(apiKey: $this->apiKey))->messages->create(
                 model: $this->model,
-                maxTokens: 1024,
+                maxTokens: 16000,
                 system: self::systemFor($profile),
                 outputConfig: OutputConfig::with(
+                    effort: 'xhigh',
                     format: JSONOutputFormat::with(schema: self::schemaFor($profile)),
                 ),
                 messages: [['role' => 'user', 'content' => $content]],
@@ -234,9 +262,10 @@ final class PricingSuggestionService
         $item->setCategory($data['category'] ?? null);
         $item->setEquipmentType($data['equipmentType'] ?? null);
         if ($profile->wantsPrice() && isset($data['priceUsd'])) {
-            // The schema can't bound a number, so bound it here — a label with
-            // four figures on it is worse than one that is merely wrong.
-            $price = min(500.0, max(0.5, (float) $data['priceUsd']));
+            // The schema can't bound a number, so bound it here. The ceiling was 500 and
+            // quietly turned an $800 collectible into a $500 one; a fundraiser would rather
+            // a volunteer see the real number and argue with it.
+            $price = min(1000.0, max(0.5, (float) $data['priceUsd']));
             $item->setPrice(number_format($price, 2, '.', ''));
         }
         // The marking is the workflow's business, not this service's — it is

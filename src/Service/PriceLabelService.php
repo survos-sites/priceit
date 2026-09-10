@@ -34,6 +34,15 @@ final class PriceLabelService
     private const TITLE_CHARS = 32;
     private const DESC_CHARS = 100;
 
+    /**
+     * The price tag has no QR code, so its text runs the full 429-dot width instead of
+     * the 300 left beside the loan-closet code. That is ~31 title chars and ~54 description
+     * chars per line. Budgets are scaled from the measured ones above, leaving the same
+     * slack for word wrap.
+     */
+    private const WIDE_TITLE_CHARS = 45;
+    private const WIDE_DESC_CHARS = 140;
+
     public function buildZpl(Item $item, ?string $qrValue = null): string
     {
         if ($item->getProfile()->wantsQrCode()) {
@@ -48,20 +57,22 @@ final class PriceLabelService
             '^MMT',          // tear-off
             '^LH0,0',
             '^CI27',         // UTF-8
-            // Title, wrapped to two lines, left column.
-            '^FO14,14^A0N,26,24^FB300,2,2,L,0^FD'.$this->escape($this->fit($this->titleFor($item), self::TITLE_CHARS)).'^FS',
+            // Title, wrapped to two lines, full width.
+            '^FO14,14^A0N,26,24^FB429,2,2,L,0^FD'.$this->escape($this->fit($this->titleFor($item), self::WIDE_TITLE_CHARS)).'^FS',
             // The price, deliberately oversized.
             '^FO14,84^A0N,86,80^FD'.$this->escape($priceText).'^FS',
+            // The item number sits right-aligned on the price row. Even "$1000" ends well short
+            // of x=300, and this keeps the bottom band free for the description.
+            '^FO300,150^A0N,18,18^FB143,1,0,R,0^FD'.$this->escape('#'.$item->getId()).'^FS',
         ];
 
         $description = trim((string) $item->getDescription());
         if ($description !== '') {
-            $lines[] = '^FO14,176^A0N,18,18^FB300,3,2,L,0^FD'.$this->escape($this->fit($description, self::DESC_CHARS)).'^FS';
+            $lines[] = '^FO14,176^A0N,18,18^FB429,3,2,L,0^FD'.$this->escape($this->fit($description, self::WIDE_DESC_CHARS)).'^FS';
         }
 
         // No QR code on an auction tag. A buyer across a table wants the price, and every
         // dot spent on a code nobody scans is a dot not spent on the number they came for.
-        $lines[] = '^FO318,186^A0N,18,18^FD'.$this->escape('#'.$item->getId()).'^FS';
         $lines[] = '^XZ';
 
         return implode("\n", $lines);

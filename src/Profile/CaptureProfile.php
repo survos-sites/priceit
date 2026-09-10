@@ -116,9 +116,9 @@ enum CaptureProfile: string
     {
         return match ($this) {
             self::GarageSale => <<<'TXT'
-                These photos are of an item going into a garage sale. Identify it, describe it
-                with a little charm, and suggest what it should be priced at on a folding table
-                on a Saturday morning.
+                These photos are of a donated item going into a weekend fundraising sale.
+                Identify it, check it for maker's marks or anything that makes it collectible,
+                describe it with a little charm, and suggest its Friday/Saturday asking price.
                 TXT,
             self::Resale => <<<'TXT'
                 These photos are of an item being listed for sale online, on eBay or Mercado
