@@ -83,6 +83,7 @@ export default class extends Controller {
                 <span class="confidence ${esc(d.confidence)}">${esc(d.confidence)} confidence</span>
                 <p class="price">${money(d.priceUsd)}</p>
                 <p class="price-note">Friday/Saturday price. Half that on Sunday.</p>
+                ${d.tagPriceUsd > 0 ? `<p class="online">Tag says <strong>${money(d.tagPriceUsd)}</strong></p>` : ''}
                 ${online}
                 <p class="why">${esc(d.why)}</p>
                 <p class="desc">${esc(d.description)}</p>

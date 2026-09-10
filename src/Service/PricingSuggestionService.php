@@ -329,6 +329,13 @@ final class PricingSuggestionService
 
     /** What a lookup adds to the stored-item schema: the volunteer is choosing a price, so show the working. */
     private const LOOKUP_PROPERTIES = [
+        // Volunteers photograph items that already carry a hand-written sticker. Reading it
+        // back lets the card set the two prices side by side, and asking for it separately
+        // keeps the model from simply echoing the sticker as its own price.
+        'tagPriceUsd' => [
+            'type' => 'number',
+            'description' => 'The price already written on a sticker or tag in the photos, in US dollars. 0 if no price is visible. Report it; do not let it decide priceUsd.',
+        ],
         'onlineLowUsd' => [
             'type' => 'number',
             'description' => 'Low end of what this typically sells for online (eBay sold listings), in US dollars.',
