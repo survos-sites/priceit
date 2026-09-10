@@ -153,8 +153,8 @@ export default class extends Controller {
     // Typing wins: whatever is in the box is the note. Anything already
     // dictated becomes the base that further speech appends to.
     this.transcript = this.hasNoteTarget ? this.noteTarget.value : '';
-    this.speech.reset();
     this.notePrefix = this.transcript;
+    this.speech.reset();
   }
 
   clearNote() {
