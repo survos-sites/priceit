@@ -40,7 +40,23 @@ export default class extends Controller {
     window.addEventListener('offline', this._onConnectivityChange);
     this._updateSpeechAvailability();
 
+    // The template ticks "print now"; a device that unticked it keeps it unticked.
+    try {
+      const saved = localStorage.getItem('priceit.printNow');
+      if (saved !== null && this.hasPrintToggleTarget) this.printToggleTarget.checked = saved === '1';
+    } catch {
+      // Storage blocked: the template default stands.
+    }
+
     this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
+  }
+
+  printChanged() {
+    try {
+      localStorage.setItem('priceit.printNow', this.printToggleTarget.checked ? '1' : '0');
+    } catch {
+      // Storage blocked: the choice lasts until the page reloads.
+    }
   }
 
   /** Whatever is in the box, typed or dictated. */

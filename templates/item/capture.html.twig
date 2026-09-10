@@ -56,12 +56,13 @@
         </label>
 
         <label class="capture-print">
-            {# Default OFF. depot->isConfigured() only proves DEPOT_BASE_URL is set, not
-               that a Zebra is plugged into it -- and pre-checking this when nothing can
-               print advances the item through `tag` toward a label that never comes out,
-               leaving it marked tagged with nothing in anyone's hand. Ticking it is a
-               deliberate choice; printing later from the admin screen always works. #}
-            <input type="checkbox" {{ stimulus_target('capture', 'printToggle') }}>
+            {# Default ON again, for the fundraiser: the thinkpad's Zebra is up, and the
+               volunteer is standing at the printer holding the item. It was off because
+               depot->isConfigured() only proves DEPOT_BASE_URL is set, not that a Zebra is
+               plugged in, and printing with nothing attached advances the item toward a
+               label that never comes out. The choice is remembered per device, so a phone
+               away from the printer can untick it once. #}
+            <input type="checkbox" checked {{ stimulus_target('capture', 'printToggle') }} data-action="change->capture#printChanged">
             <span>Print the label as soon as it is described</span>
         </label>
 
