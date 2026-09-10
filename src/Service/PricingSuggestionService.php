@@ -261,7 +261,10 @@ final class PricingSuggestionService
         $item->setDescription($data['description'] ?? null);
         $item->setCategory($data['category'] ?? null);
         $item->setEquipmentType($data['equipmentType'] ?? null);
-        if ($profile->wantsPrice() && isset($data['priceUsd'])) {
+        // A price already on the item was typed by a person, at capture or in admin, and the
+        // AI's guess never replaces it. To have the AI re-price an item, clear its price first.
+        $keptPrice = $item->getPrice() !== null;
+        if ($profile->wantsPrice() && isset($data['priceUsd']) && !$keptPrice) {
             // The schema can't bound a number, so bound it here. The ceiling was 500 and
             // quietly turned an $800 collectible into a $500 one; a fundraiser would rather
             // a volunteer see the real number and argue with it.

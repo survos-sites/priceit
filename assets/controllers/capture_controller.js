@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput'];
+  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput', 'price'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -235,6 +235,8 @@ export default class extends Controller {
           // Sent per capture, so it can be turned off for one odd item without
           // changing a setting somewhere else.
           print: this.hasPrintToggleTarget ? this.printToggleTarget.checked : false,
+          // Blank means "let the AI price it"; a number here wins over the AI's.
+          ...(this.hasPriceTarget && this.priceTarget.value.trim() !== '' ? { price: this.priceTarget.value.trim() } : {}),
         },
       });
     } catch (err) {
@@ -245,6 +247,7 @@ export default class extends Controller {
     this._setStatus('Queued — uploading in the background');
     this.photos = [];
     this.clearNote();
+    if (this.hasPriceTarget) this.priceTarget.value = '';
     this._renderThumbs();
     this._refreshPendingCount();
   }

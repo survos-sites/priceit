@@ -53,6 +53,13 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
         // kickoff dispatched on postFlush is what eventually reads it.
         $item->printRequested = (bool) ($request->metadata['print'] ?? false);
 
+        // Typed on the capture screen. The AI still writes the title and description, but
+        // PricingSuggestionService leaves a price it finds already set alone.
+        $price = $request->metadata['price'] ?? null;
+        if (is_numeric($price) && (float) $price > 0 && $item->getProfile()->wantsPrice()) {
+            $item->setPrice(number_format(min(9999.0, (float) $price), 2, '.', ''));
+        }
+
         $transcript = $request->metadata['transcript'] ?? null;
         if (\is_string($transcript) && trim($transcript) !== '') {
             $item->setTranscript(trim($transcript));

@@ -41,6 +41,17 @@
                   placeholder="{{ profiles|first.notePlaceholder() }}"
                   data-action="capture#noteChanged"></textarea>
 
+        {# Optional. A volunteer who knows what something should go for types it here,
+           and the AI only describes the item. Blank means the AI prices it. Entered
+           at capture because changing a price afterwards means signing in to the admin
+           screen, which nobody at the table has time for. #}
+        <label class="capture-profile">
+            <span>Price</span>
+            <input type="number" inputmode="decimal" min="0" step="0.5"
+                   class="capture-profile-select" placeholder="Leave blank for AI"
+                   {{ stimulus_target('capture', 'price') }}>
+        </label>
+
         {# Decides what the AI is asked for, what the label carries, and where the item
            goes afterwards. Auction is the default so nothing about the garage-sale flow
            changes for anyone who ignores this. #}
