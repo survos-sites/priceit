@@ -38,7 +38,7 @@ final class InstallController extends AbstractController
 
         return $this->render('install.html.twig', [
             'installUrl' => $base.$this->generateUrl('app_install'),
-            'captureUrl' => $this->generateUrl('item_capture'),
+            'captureUrl' => $this->generateUrl('app_lookup'),
         ]);
     }
 }

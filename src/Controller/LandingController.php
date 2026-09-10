@@ -44,7 +44,8 @@ final class LandingController extends AbstractController
         return $this->render('landing.html.twig', [
             'captureUrl' => $captureUrl,
             'embeddedUrl' => $embeddedUrl,
-            'phoneUrl' => $base.$captureUrl,
+            // The QR is what a pricer scans at the table, so it opens the quick lookup.
+            'phoneUrl' => $base.$this->generateUrl('app_lookup'),
             'adminUrl' => $this->generateUrl('admin_item_index'),
             'tunnelConfigured' => $this->publicUrl !== '',
             'absoluteCaptureUrl' => $this->generateUrl('item_capture', [], UrlGeneratorInterface::ABSOLUTE_URL),

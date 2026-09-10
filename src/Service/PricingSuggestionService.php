@@ -218,44 +218,14 @@ final class PricingSuggestionService
         $content = $images;
         $content[] = TextBlockParam::with(text: $this->prompt($item));
 
-        try {
-            // Opus 5 thinks by default, and thinking tokens count against maxTokens. At the
-            // old 1024 the model had almost no room to look for a maker's mark before
-            // answering. Spotting that a bowl is Fire-King is exactly the step that needs it,
-            // and the call runs on the worker, so the extra seconds cost nobody at the table.
-            $message = (new Client(apiKey: $this->apiKey))->messages->create(
-                model: $this->model,
-                maxTokens: 16000,
-                system: self::systemFor($profile),
-                outputConfig: OutputConfig::with(
-                    effort: 'xhigh',
-                    format: JSONOutputFormat::with(schema: self::schemaFor($profile)),
-                ),
-                messages: [['role' => 'user', 'content' => $content]],
-            );
-        } catch (\Throwable $e) {
-            $this->logger->error('priceit: suggestion failed', ['item' => $item->getId(), 'error' => $e->getMessage()]);
+        // xhigh: this runs on the worker, so the extra seconds cost nobody at the table.
+        $answer = $this->ask(self::systemFor($profile), $content, self::schemaFor($profile), 'xhigh');
+        if (!$answer['ok']) {
+            $this->logger->error('priceit: suggestion failed', ['item' => $item->getId(), 'error' => $answer['message']]);
 
-            return ['ok' => false, 'message' => 'AI call failed: '.$e->getMessage()];
+            return ['ok' => false, 'message' => $answer['message']];
         }
-
-        // A refusal is a 200 with no usable content — check before reading it.
-        if ($message->stopReason === 'refusal') {
-            return ['ok' => false, 'message' => 'The model declined to describe this photo.'];
-        }
-
-        $json = '';
-        foreach ($message->content as $block) {
-            if ($block->type === 'text') {
-                $json .= $block->text;
-            }
-        }
-
-        try {
-            $data = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            return ['ok' => false, 'message' => 'Could not read the model response: '.$e->getMessage()];
-        }
+        $data = $answer['data'];
 
         $item->setTitle($data['title'] ?? null);
         $item->setDescription($data['description'] ?? null);
@@ -295,6 +265,129 @@ final class PricingSuggestionService
                 $data['confidence'] ?? 'unknown'
             ),
         ];
+    }
+
+    /**
+     * A quick lookup: photos in, an answer out, nothing saved.
+     *
+     * This is what volunteers were doing by hand with ChatGPT or Google Lens: hold the thing
+     * up, ask what it is and what to charge, and decide for themselves. The answer carries the
+     * online value and the reasoning as well as the asking price, because the person reading
+     * it is choosing a price rather than printing ours.
+     *
+     * @param list<array{bytes: string, mime: string}> $photos
+     *
+     * @return array{ok: true, data: array<string, mixed>}|array{ok: false, message: string}
+     */
+    public function lookup(array $photos, ?string $note = null): array
+    {
+        if (!$this->isConfigured()) {
+            return ['ok' => false, 'message' => 'ANTHROPIC_API_KEY is not set.'];
+        }
+
+        $content = [];
+        foreach (\array_slice($photos, 0, 3) as $photo) {
+            $mediaType = $this->mediaTypeFor($photo['mime']);
+            if ($mediaType === null) {
+                continue;
+            }
+            $content[] = ImageBlockParam::with(
+                source: Base64ImageSource::with(data: base64_encode($photo['bytes']), mediaType: $mediaType),
+            );
+        }
+        if ($content === []) {
+            return ['ok' => false, 'message' => 'No readable photo. Try a JPEG or PNG.'];
+        }
+
+        $prompt = CaptureProfile::GarageSale->promptGuidance();
+        $note = trim((string) $note);
+        if ($note !== '') {
+            $prompt .= sprintf("\n\nThe volunteer said: \"%s\"", $note);
+        }
+        $content[] = TextBlockParam::with(text: $prompt);
+
+        $schema = self::schemaFor(CaptureProfile::GarageSale);
+        $schema['properties'] += self::LOOKUP_PROPERTIES;
+        array_push($schema['required'], ...array_keys(self::LOOKUP_PROPERTIES));
+
+        // high rather than xhigh: someone is standing there waiting, and the request has to
+        // finish well inside the proxy's 60-second limit.
+        $answer = $this->ask(self::SYSTEM_AUCTION, $content, $schema, 'high');
+        if (!$answer['ok']) {
+            $this->logger->error('priceit: lookup failed', ['error' => $answer['message']]);
+
+            return $answer;
+        }
+
+        $data = $answer['data'];
+        if (isset($data['priceUsd'])) {
+            $data['priceUsd'] = min(1000.0, max(0.5, (float) $data['priceUsd']));
+        }
+
+        return ['ok' => true, 'data' => $data];
+    }
+
+    /** What a lookup adds to the stored-item schema: the volunteer is choosing a price, so show the working. */
+    private const LOOKUP_PROPERTIES = [
+        'onlineLowUsd' => [
+            'type' => 'number',
+            'description' => 'Low end of what this typically sells for online (eBay sold listings), in US dollars.',
+        ],
+        'onlineHighUsd' => [
+            'type' => 'number',
+            'description' => 'High end of what this typically sells for online, in US dollars.',
+        ],
+        'why' => [
+            'type' => 'string',
+            'maxLength' => 400,
+            'description' => 'Two or three plain sentences: what it is, what makes it worth more or less (maker, age, condition, demand), and how the asking price relates to the online value. Name what you could not confirm from the photos. Use commas and periods, not dashes.',
+        ],
+    ];
+
+    /**
+     * One structured-output call. Opus 5 thinks by default, and thinking tokens count against
+     * maxTokens: at the old 1024 the model had almost no room to look for a maker's mark before
+     * answering, and spotting that a bowl is Fire-King is exactly the step that needs it.
+     *
+     * @param list<ImageBlockParam|TextBlockParam> $content
+     * @param array<string, mixed>                 $schema
+     *
+     * @return array{ok: true, data: array<string, mixed>}|array{ok: false, message: string}
+     */
+    private function ask(string $system, array $content, array $schema, string $effort): array
+    {
+        try {
+            $message = (new Client(apiKey: $this->apiKey))->messages->create(
+                model: $this->model,
+                maxTokens: 16000,
+                system: $system,
+                outputConfig: OutputConfig::with(
+                    effort: $effort,
+                    format: JSONOutputFormat::with(schema: $schema),
+                ),
+                messages: [['role' => 'user', 'content' => $content]],
+            );
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => 'AI call failed: '.$e->getMessage()];
+        }
+
+        // A refusal is a 200 with no usable content — check before reading it.
+        if ($message->stopReason === 'refusal') {
+            return ['ok' => false, 'message' => 'The model declined to describe this photo.'];
+        }
+
+        $json = '';
+        foreach ($message->content as $block) {
+            if ($block->type === 'text') {
+                $json .= $block->text;
+            }
+        }
+
+        try {
+            return ['ok' => true, 'data' => json_decode($json, true, flags: \JSON_THROW_ON_ERROR)];
+        } catch (\JsonException $e) {
+            return ['ok' => false, 'message' => 'Could not read the model response: '.$e->getMessage()];
+        }
     }
 
     /**

@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}What is it? · PriceIt{% endblock %}
+{% block navbar_title %}What is it? What's it worth?{% endblock %}
+
+{% block body %}
+    <style>
+        .lookup { padding: 12px; max-width: 560px; margin: 0 auto; }
+        .lookup .pick { display: flex; gap: 8px; }
+        .lookup .pick label { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+            min-height: 52px; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer;
+            background: #1c1c1e; color: #fff; }
+        .lookup .pick label.secondary { background: #e5e5ea; color: #1c1c1e; }
+        .lookup .thumbs { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+        .lookup .thumb { position: relative; width: 88px; height: 88px; }
+        .lookup .thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .lookup .thumb button { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%;
+            border: 0; background: #1c1c1e; color: #fff; font-size: 14px; line-height: 26px; padding: 0; }
+        .lookup textarea { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 10px; font-size: 16px;
+            border: 1px solid #c7c7cc; border-radius: 8px; resize: vertical; }
+        .lookup .ask { display: block; width: 100%; margin-top: 10px; min-height: 56px; border: 0; border-radius: 12px;
+            background: #E67E22; color: #fff; font-size: 19px; font-weight: 700; }
+        .lookup .ask:disabled { opacity: .45; }
+        .lookup .status { text-align: center; margin: 12px 0; font-size: 15px; color: #3a3a3c; min-height: 1.4em; }
+        .lookup .card { border-radius: 14px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12); padding: 16px; margin-top: 6px; }
+        .lookup .card h3 { margin: 0 0 4px; font-size: 21px; line-height: 1.25; }
+        .lookup .price { font-size: 46px; font-weight: 800; line-height: 1.1; margin: 6px 0 0; }
+        .lookup .price-note { font-size: 14px; color: #6b6b70; margin: 0 0 10px; }
+        .lookup .online { font-size: 16px; margin: 0 0 10px; }
+        .lookup .why { font-size: 16px; line-height: 1.45; margin: 0 0 10px; }
+        .lookup .desc { font-size: 14px; color: #3a3a3c; font-style: italic; margin: 0 0 10px; }
+        .lookup .confidence { display: inline-block; font-size: 13px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+        .lookup .confidence.high { background: #d8f5df; color: #1a6b32; }
+        .lookup .confidence.medium { background: #fff1d6; color: #8a5a00; }
+        .lookup .confidence.low { background: #ffe0dd; color: #a3261a; }
+        .lookup .again { display: block; width: 100%; margin-top: 14px; min-height: 48px; border-radius: 12px;
+            border: 1px solid #c7c7cc; background: #fff; font-size: 17px; font-weight: 600; }
+    </style>
+
+    <div class="lookup" {{ stimulus_controller('lookup', { url: path('app_lookup_ask') }) }}>
+        <div data-lookup-target="form">
+            <div class="pick">
+                {# capture= opens the phone's own camera app, not a stream held by this page, so
+                   nothing here competes with other tabs for the camera. #}
+                <label>📷 Take photo
+                    <input type="file" accept="image/*" capture="environment" hidden data-action="change->lookup#add">
+                </label>
+                <label class="secondary">🖼️ Choose
+                    <input type="file" accept="image/*" multiple hidden data-action="change->lookup#add">
+                </label>
+            </div>
+
+            <div class="thumbs" data-lookup-target="thumbs"></div>
+
+            <textarea data-lookup-target="note" rows="1"
+                      placeholder="Optional: anything the photo can't show (marks, size, works?)"></textarea>
+
+            <button type="button" class="ask" disabled data-lookup-target="ask" data-action="lookup#ask">
+                Price it!
+            </button>
+            <p class="status" data-lookup-target="status">Up to 3 photos. Get the maker's mark or label if there is one.</p>
+        </div>
+
+        <div data-lookup-target="result" hidden></div>
+    </div>
+{% endblock %}

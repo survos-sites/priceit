@@ -11,7 +11,7 @@ pwa:
         background_color: '#111318'
         display: 'standalone'
         scope: '/'
-        start_url: '/capture'  # the app itself, not the landing page in front of it
+        start_url: '/lookup'  # the quick lookup: public, so the installed app opens without a login
         categories:
             - 'utilities'
         icons:
