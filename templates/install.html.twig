@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Install PriceIt{% endblock %}
+{% block navbar_title %}Install PriceIt{% endblock %}
+
+{% block body %}
+    {# Chrome can fire beforeinstallprompt before Stimulus has loaded the controller, and it
+       fires only once. Keep it here so the controller finds it when it connects. #}
+    <script>
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            window.priceitInstallPrompt = event;
+        });
+    </script>
+
+    <style>
+        .install { padding: 16px; max-width: 520px; margin: 0 auto; line-height: 1.45; }
+        .install h2 { margin: 8px 0 4px; font-size: 22px; }
+        .install .lead { opacity: .8; margin: 0 0 20px; }
+        .install .big-button { display: block; width: 100%; padding: 16px; font-size: 18px; font-weight: 600;
+            border: 0; border-radius: 12px; background: #E67E22; color: #fff; text-align: center; text-decoration: none; }
+        .install ol { padding-left: 22px; }
+        .install li { margin: 8px 0; }
+        .install .note { font-size: 14px; opacity: .75; margin-top: 16px; }
+        .install .qr { text-align: center; margin-top: 28px; }
+        .install .qr img { width: 180px; height: 180px; background: #fff; padding: 8px; border-radius: 8px; }
+    </style>
+
+    <div class="install" {{ stimulus_controller('install') }}>
+        <h2>PriceIt on your phone</h2>
+        <p class="lead">Install it as an app so it gets its own window and the camera. Browser tabs fight over the camera.</p>
+
+        <div data-install-target="installed" hidden>
+            <p><strong>You're in the installed app.</strong></p>
+            <a class="big-button" href="{{ captureUrl }}">Start capturing</a>
+        </div>
+
+        <div data-install-target="prompt" hidden>
+            <button type="button" class="big-button" data-action="install#install">Install PriceIt</button>
+        </div>
+
+        <div data-install-target="ios" hidden>
+            <p><strong>On iPhone or iPad:</strong></p>
+            <ol>
+                <li>Open this page in <strong>Safari</strong>.</li>
+                <li>Tap the <strong>Share</strong> button (the square with an arrow pointing up).</li>
+                <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+                <li>Open <strong>PriceIt</strong> from your home screen, not from Safari.</li>
+            </ol>
+        </div>
+
+        <div data-install-target="android" hidden>
+            <p><strong>On Android:</strong></p>
+            <ol>
+                <li>Open this page in <strong>Chrome</strong>.</li>
+                <li>Tap the <strong>&#8942;</strong> menu at the top right.</li>
+                <li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                <li>Open <strong>PriceIt</strong> from your home screen, then close the Chrome tabs showing it.</li>
+            </ol>
+        </div>
+
+        <p class="note">You'll sign in once inside the app. On iPhone the installed app doesn't share Safari's login, so sign in there too.</p>
+
+        <div class="qr" data-install-target="qr">
+            <img src="{{ qr_code_url(installUrl) }}" alt="Scan to install PriceIt">
+            <p class="note">Another phone? Scan this to open this page there.</p>
+        </div>
+    </div>
+{% endblock %}
