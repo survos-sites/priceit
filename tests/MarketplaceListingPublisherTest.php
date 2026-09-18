@@ -24,7 +24,7 @@ final class MarketplaceListingPublisherTest extends TestCase
     private function publisher(array $connections = self::CONNECTIONS): MarketplaceListingPublisher
     {
         return new MarketplaceListingPublisher(
-            em: $this->createMock(EntityManagerInterface::class),
+            em: $this->createStub(EntityManagerInterface::class),
             publicUrl: 'https://mac-priceit.scanstationai.work',
             connections: $connections,
         );
