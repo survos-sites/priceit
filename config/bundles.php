@@ -38,4 +38,5 @@ return [
     Survos\RecordStoreBundle\SurvosRecordStoreBundle::class => ['all' => true],
     Survos\MarketplaceBundle\SurvosMarketplaceBundle::class => ['all' => true],
     SymfonyCasts\Bundle\VerifyEmail\SymfonyCastsVerifyEmailBundle::class => ['all' => true],
+    Survos\BrevoBundle\SurvosBrevoBundle::class => ['all' => true],
 ];

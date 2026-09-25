@@ -38,6 +38,7 @@ final class AdminMenu implements KnpMenuHelperInterface
         $menu = $event->getMenu();
 
         $this->add($menu, route: 'admin_item_index', label: 'Items', icon: 'tabler:list');
+        $this->add($menu, route: 'admin_mail_index', label: 'Mail', icon: 'tabler:mail');
 
         foreach ($this->connections as $name => $config) {
             if ('etsy' !== ($config['driver'] ?? null)) {

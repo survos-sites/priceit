@@ -1,0 +1,3 @@
+survos_brevo:
+    # the Brevo pages live in the admin skin, alongside Items and Mail
+    base_template: admin/base.html.twig

@@ -1,0 +1,55 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Mail{% endblock %}
+
+{% block body %}
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <div class="row row-cards mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Test</h3></div>
+                <div class="card-body">
+                    <p class="text-secondary">Sends one email to <strong>{{ app.user.email }}</strong> through the same transport as registration.</p>
+                    <form method="post" action="{{ path('admin_mail_test') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('mail-test') }}">
+                        <button class="btn btn-primary">Send test email to me</button>
+                    </form>
+                    <p class="text-secondary small mt-3 mb-0">
+                        Account, lists, Brevo's own logs and the blocklist are under the <strong>Brevo</strong> menu.<br>
+                        Webhook (Brevo → Transactional → Settings → Webhook):<br>
+                        <code>{{ webhookUrl }}</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><h3 class="card-title">Recent webhook events</h3></div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead><tr><th>When</th><th>Email</th><th>Event</th><th>Reason</th><th>Message id</th></tr></thead>
+                <tbody>
+                {% for e in events %}
+                    <tr>
+                        <td class="text-secondary">{{ e.occurredAt|date('M j, g:ia') }}</td>
+                        <td>{{ e.email }}</td>
+                        <td><span class="badge {{ e.suppression ? 'bg-red-lt' : 'bg-blue-lt' }}">{{ e.brevoEvent ?? e.name }}</span></td>
+                        <td class="text-secondary">{{ e.reason }}</td>
+                        <td class="text-secondary small font-monospace">{{ e.messageId }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="text-secondary">No webhook events yet. Send a test, and check the webhook is configured in Brevo.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}

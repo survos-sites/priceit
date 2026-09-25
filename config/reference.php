@@ -679,7 +679,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     webhook?: bool|array{ // Webhook configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         message_bus?: scalar|Param|null, // The message bus to use. // Default: "messenger.default_bus"
  *         event_header_name?: scalar|Param|null, // Default: "Webhook-Event"
  *         id_header_name?: scalar|Param|null, // Default: "Webhook-Id"
@@ -691,7 +691,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     remote_event?: bool|array{ // RemoteEvent configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     json_streamer?: bool|array{ // JSON streamer configuration
  *         enabled?: bool|Param, // Default: false
@@ -2656,6 +2656,15 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type SymfonycastsVerifyEmailConfig = array{
  *     lifetime?: int|Param, // The length of time in seconds that a signed URI is valid for after it is created. // Default: 3600
  * }
+ * @psalm-type SurvosBrevoConfig = array{
+ *     routes_enabled?: bool|Param, // Set false to manage this bundle's routes manually in your app. Bundles exposing sensitive routes (e.g. running console commands) should default this off. // Default: true
+ *     route_prefix?: scalar|Param|null, // URL prefix applied to all routes from this bundle. // Default: "/admin/brevo"
+ *     locale_prefix?: bool|Param, // Prepend {_locale} (constrained to kernel.enabled_locales) to this bundle's route prefix, e.g. /{_locale}/f instead of /f -- for bundles whose routes are meant to be shared/bookmarked, so the URL itself carries the locale instead of a query param. // Default: false
+ *     api_key?: scalar|Param|null, // Brevo API key (xkeysib-…). Empty means not configured; commands and pages say so instead of failing mid-call. // Default: "%env(default:survos_brevo.empty:BREVO_API_KEY)%"
+ *     webhook?: bool|Param, // Route /webhook/brevo to the symfony/brevo-mailer parser and re-dispatch events as BrevoMailEvent. Needs symfony/webhook and symfony/brevo-mailer. // Default: true
+ *     admin_role?: scalar|Param|null, // Role required for the admin pages and the navbar dropdown. // Default: "ROLE_ADMIN"
+ *     base_template?: scalar|Param|null, // Template the admin pages extend; it must define a "body" block. // Default: "base.html.twig"
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2690,6 +2699,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     survos_record_store?: SurvosRecordStoreConfig,
  *     survos_marketplace?: SurvosMarketplaceConfig,
  *     symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
+ *     survos_brevo?: SurvosBrevoConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2728,6 +2738,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_record_store?: SurvosRecordStoreConfig,
  *         survos_marketplace?: SurvosMarketplaceConfig,
  *         symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
+ *         survos_brevo?: SurvosBrevoConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2763,6 +2774,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_record_store?: SurvosRecordStoreConfig,
  *         survos_marketplace?: SurvosMarketplaceConfig,
  *         symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
+ *         survos_brevo?: SurvosBrevoConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2800,6 +2812,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         survos_record_store?: SurvosRecordStoreConfig,
  *         survos_marketplace?: SurvosMarketplaceConfig,
  *         symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
+ *         survos_brevo?: SurvosBrevoConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

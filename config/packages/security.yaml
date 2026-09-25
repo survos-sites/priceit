@@ -45,6 +45,9 @@ security:
         - { path: ^/verify/email, roles: PUBLIC_ACCESS }
         - { path: ^/health, roles: PUBLIC_ACCESS }
         - { path: ^/install, roles: PUBLIC_ACCESS }
+        # Brevo delivery/bounce callbacks. Brevo's source IPs are checked by the parser,
+        # plus HTTP Basic when BREVO_WEBHOOK_SECRET is set. See survos/brevo-bundle.
+        - { path: ^/webhook, roles: PUBLIC_ACCESS }
         # Quick lookup: photos in, an answer out, nothing saved. See LookupController.
         - { path: ^/lookup, roles: PUBLIC_ACCESS }
         - { path: ^/$, roles: PUBLIC_ACCESS }
