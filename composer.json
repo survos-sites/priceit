@@ -37,6 +37,7 @@
         "survos/tabler-bundle": "^2.30.4",
         "symfony/asset": "8.1.*",
         "symfony/asset-mapper": "8.1.*",
+        "symfony/brevo-mailer": "8.1.*",
         "symfony/console": "8.1.*",
         "symfony/doctrine-messenger": "8.1.*",
         "symfony/dotenv": "8.1.*",
