@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Menu;
 
 use Survos\TablerBundle\Event\MenuEvent;
-use Survos\TablerBundle\Traits\KnpMenuHelperInterface;
-use Survos\TablerBundle\Traits\KnpMenuHelperTrait;
+use Survos\TablerBundle\Menu\MenuBuilderTrait;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -21,9 +20,9 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * configured, so an install with no Etsy credentials does not grow a link that
  * 404s.
  */
-final class AdminMenu implements KnpMenuHelperInterface
+final class AdminMenu
 {
-    use KnpMenuHelperTrait;
+    use MenuBuilderTrait;
 
     /** @param array<string, array{driver: string}> $connections */
     public function __construct(
@@ -37,21 +36,15 @@ final class AdminMenu implements KnpMenuHelperInterface
     {
         $menu = $event->getMenu();
 
-        $this->add($menu, route: 'admin_item_index', label: 'Items', icon: 'tabler:list');
-        $this->add($menu, route: 'admin_mail_index', label: 'Mail', icon: 'tabler:mail');
+        $this->add($menu, route: 'admin_item_index', label: 'Items', icon: 'tabler:list', translationDomain: 'routing');
+        $this->add($menu, route: 'admin_mail_index', label: 'Mail', icon: 'tabler:mail', translationDomain: 'routing');
 
         foreach ($this->connections as $name => $config) {
             if ('etsy' !== ($config['driver'] ?? null)) {
                 continue;
             }
 
-            $this->add(
-                $menu,
-                route: 'etsy_shop',
-                rp: ['connection' => $name],
-                label: 'Etsy: ' . $name,
-                icon: 'tabler:brand-etsy',
-            );
+            $this->add($menu, route: 'etsy_shop', rp: ['connection' => $name], label: 'Etsy: ' . $name, icon: 'tabler:brand-etsy', translationDomain: 'routing');
         }
     }
 }
