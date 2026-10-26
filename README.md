@@ -152,14 +152,21 @@ Visit `/` for the capture app, `/admin` for the review dashboard.
 | `/admin/items/{id}/edit` | POST | Save title/description/price |
 | `/api/items` | GET/PATCH | API Platform resource |
 
+## AI pricing and photo lookup
+
+`PricingSuggestionService` uses Symfony AI 1.0 beta 1's Anthropic platform for both
+stored-item suggestions and `/lookup`. It sends up to three photos plus the note,
+with profile-specific prompts and structured JSON output. Configure
+`ANTHROPIC_API_KEY` and `PRICEIT_AI_MODEL` as before. The provider's effort setting
+and 16,000-token output budget are preserved. Refusals, truncated output, invalid
+JSON and HTTP errors are returned as failed suggestions.
+
+The two Symfony AI packages use `^1.0.0-beta1`; other dependencies retain stable
+resolution. Run `vendor/bin/phpunit` for the mocked HTTP integration tests; these
+do not spend API credits or send photos to Anthropic.
+
 ## Roadmap / deliberately not built yet
 
-- **AI enrichment** — read the photo(s) + spoken-note transcript, propose a title, a fun
-  description, and a starting price. `Item` already has `title`/`description`/`price`/`transcript`
-  fields waiting for it. The natural fit is `survos/ai-workflow-bundle`'s `Task` pattern
-  (`ObserveTask` → `GenerateTitleTask`), skipping its claims-ledger/workflow-subject machinery
-  (built for a multi-source museum pipeline) in favor of calling the same underlying
-  `Symfony\AI\Agent\AgentInterface` directly.
 - **Marketplace export** — once AI produces a clean title/description/price, "post to eBay" or
   "post to Freecycle" becomes a separate export target off the same `Item`, not a separate capture
   flow.

@@ -137,6 +137,9 @@
     "survos/marketplace-bundle": {
         "version": "dev-main"
     },
+    "survos/menu-bundle": {
+        "version": "2.42.23"
+    },
     "survos/quickbase-bundle": {
         "version": "2.24.33"
     },
@@ -154,6 +157,18 @@
     },
     "survos/tui-extras-bundle": {
         "version": "2.24.24"
+    },
+    "symfony/ai-anthropic-platform": {
+        "version": "1.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "169d966953a6b9aeca111cb7f0ac2da72e050159"
+        },
+        "files": [
+            "config/packages/ai_anthropic_platform.yaml"
+        ]
     },
     "symfony/asset-mapper": {
         "version": "8.1",

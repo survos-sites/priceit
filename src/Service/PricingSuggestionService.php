@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Anthropic\Client;
-use Anthropic\Messages\Base64ImageSource;
-use Anthropic\Messages\ImageBlockParam;
-use Anthropic\Messages\JSONOutputFormat;
-use Anthropic\Messages\OutputConfig;
-use Anthropic\Messages\TextBlockParam;
 use App\Entity\Item;
 use App\Entity\MediaKind;
 use App\Profile\CaptureProfile;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use League\Flysystem\FilesystemOperator;
+use Psr\Log\LoggerInterface;
+use Symfony\AI\Platform\Bridge\Anthropic\Factory;
+use Symfony\AI\Platform\Message\Content\Image;
+use Symfony\AI\Platform\Message\Content\Text;
+use Symfony\AI\Platform\Message\Message;
+use Symfony\AI\Platform\Message\MessageBag;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Looks at an item's photos and proposes a title, a description and a price.
@@ -167,6 +167,7 @@ final class PricingSuggestionService
         private readonly string $apiKey,
         #[Autowire('%env(PRICEIT_AI_MODEL)%')]
         private readonly string $model,
+        private readonly HttpClientInterface $httpClient,
     ) {
     }
 
@@ -216,7 +217,7 @@ final class PricingSuggestionService
         $profile = $item->getProfile();
 
         $content = $images;
-        $content[] = TextBlockParam::with(text: $this->prompt($item));
+        $content[] = new Text($this->prompt($item));
 
         // xhigh: this runs on the worker, so the extra seconds cost nobody at the table.
         $answer = $this->ask(self::systemFor($profile), $content, self::schemaFor($profile), 'xhigh');
@@ -291,9 +292,7 @@ final class PricingSuggestionService
             if ($mediaType === null) {
                 continue;
             }
-            $content[] = ImageBlockParam::with(
-                source: Base64ImageSource::with(data: base64_encode($photo['bytes']), mediaType: $mediaType),
-            );
+            $content[] = new Image($photo['bytes'], $mediaType);
         }
         if ($content === []) {
             return ['ok' => false, 'message' => 'No readable photo. Try a JPEG or PNG.'];
@@ -304,7 +303,7 @@ final class PricingSuggestionService
         if ($note !== '') {
             $prompt .= sprintf("\n\nThe volunteer said: \"%s\"", $note);
         }
-        $content[] = TextBlockParam::with(text: $prompt);
+        $content[] = new Text($prompt);
 
         $schema = self::schemaFor(CaptureProfile::GarageSale);
         $schema['properties'] += self::LOOKUP_PROPERTIES;
@@ -356,49 +355,52 @@ final class PricingSuggestionService
      * maxTokens: at the old 1024 the model had almost no room to look for a maker's mark before
      * answering, and spotting that a bowl is Fire-King is exactly the step that needs it.
      *
-     * @param list<ImageBlockParam|TextBlockParam> $content
-     * @param array<string, mixed>                 $schema
+     * @param list<Image|Text>     $content
+     * @param array<string, mixed> $schema
      *
      * @return array{ok: true, data: array<string, mixed>}|array{ok: false, message: string}
      */
     private function ask(string $system, array $content, array $schema, string $effort): array
     {
         try {
-            $message = (new Client(apiKey: $this->apiKey))->messages->create(
-                model: $this->model,
-                maxTokens: 16000,
-                system: $system,
-                outputConfig: OutputConfig::with(
-                    effort: $effort,
-                    format: JSONOutputFormat::with(schema: $schema),
-                ),
-                messages: [['role' => 'user', 'content' => $content]],
+            $response = Factory::createPlatform($this->apiKey, $this->httpClient, cacheRetention: 'none')->invoke(
+                $this->model,
+                new MessageBag(Message::forSystem($system), Message::ofUser(...$content)),
+                [
+                    'max_tokens' => 16000,
+                    'output_config' => [
+                        'effort' => $effort,
+                        'format' => ['type' => 'json_schema', 'schema' => $schema],
+                    ],
+                ],
             );
+            $result = $response->getResult();
+            $stopReason = $result->getMetadata()->get('finish_reason')?->getRaw();
+            if ($stopReason === 'refusal') {
+                return ['ok' => false, 'message' => 'The model declined to describe this photo.'];
+            }
+            if ($stopReason === 'max_tokens') {
+                return ['ok' => false, 'message' => 'The model response was cut short. Please try again.'];
+            }
+            $json = $response->asText();
         } catch (\Throwable $e) {
             return ['ok' => false, 'message' => 'AI call failed: '.$e->getMessage()];
         }
 
-        // A refusal is a 200 with no usable content — check before reading it.
-        if ($message->stopReason === 'refusal') {
-            return ['ok' => false, 'message' => 'The model declined to describe this photo.'];
-        }
-
-        $json = '';
-        foreach ($message->content as $block) {
-            if ($block->type === 'text') {
-                $json .= $block->text;
-            }
-        }
-
         try {
-            return ['ok' => true, 'data' => json_decode($json, true, flags: \JSON_THROW_ON_ERROR)];
+            $data = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
+            if (!\is_array($data) || array_is_list($data)) {
+                return ['ok' => false, 'message' => 'The model response was not a JSON object.'];
+            }
+
+            return ['ok' => true, 'data' => $data];
         } catch (\JsonException $e) {
             return ['ok' => false, 'message' => 'Could not read the model response: '.$e->getMessage()];
         }
     }
 
     /**
-     * @return ImageBlockParam[]
+     * @return Image[]
      */
     private function imageBlocks(Item $item): array
     {
@@ -429,12 +431,7 @@ final class PricingSuggestionService
                 continue;
             }
 
-            $blocks[] = ImageBlockParam::with(
-                source: Base64ImageSource::with(
-                    data: base64_encode($bytes),
-                    mediaType: $mediaType,
-                ),
-            );
+            $blocks[] = new Image($bytes, $mediaType);
 
             // Three angles is plenty to identify a thing, and each photo is a
             // meaningful slice of the request budget.
