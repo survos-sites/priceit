@@ -11,7 +11,7 @@ use ApiPlatform\Metadata\Patch;
 use App\Profile\CaptureProfile;
 use App\Repository\ItemRepository;
 use App\Workflow\ItemFlow;
-use Survos\StateBundle\Traits\MarkingTrait;
+use App\Entity\Traits\MarkingTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;

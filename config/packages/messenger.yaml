@@ -9,6 +9,16 @@ framework:
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
+            item_suggest:
+                dsn: 'doctrine://default?queue_name=item.suggest'
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+            item_list:
+                dsn: 'doctrine://default?queue_name=item.list'
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
             failed: 'doctrine://default?queue_name=failed'
             # sync: 'sync://'
 

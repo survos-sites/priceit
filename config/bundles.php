@@ -27,7 +27,6 @@ return [
     Survos\TablerBundle\SurvosTablerBundle::class => ['all' => true],
     Endroid\QrCodeBundle\EndroidQrCodeBundle::class => ['all' => true],
     Survos\DocBundle\SurvosDocBundle::class => ['all' => true],
-    Survos\StateBundle\SurvosStateBundle::class => ['all' => true],
     Survos\TuiExtrasBundle\SurvosTuiExtrasBundle::class => ['all' => true],
     Survos\SupervisorBundle\SurvosSupervisorBundle::class => ['all' => true],
     League\FlysystemBundle\FlysystemBundle::class => ['all' => true],
@@ -40,4 +39,6 @@ return [
     SymfonyCasts\Bundle\VerifyEmail\SymfonyCastsVerifyEmailBundle::class => ['all' => true],
     Survos\BrevoBundle\SurvosBrevoBundle::class => ['all' => true],
     Survos\MenuBundle\SurvosMenuBundle::class => ['all' => true],
+    Survos\WorkflowExtrasBundle\SurvosWorkflowExtrasBundle::class => ['all' => true],
+    Survos\WorkflowMessengerBundle\SurvosWorkflowMessengerBundle::class => ['all' => true],
 ];

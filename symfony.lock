@@ -146,9 +146,6 @@
     "survos/record-store-bundle": {
         "version": "2.24.36"
     },
-    "survos/state-bundle": {
-        "version": "2.24.29"
-    },
     "survos/supervisor-bundle": {
         "version": "2.24.27"
     },
@@ -157,6 +154,12 @@
     },
     "survos/tui-extras-bundle": {
         "version": "2.24.24"
+    },
+    "survos/workflow-extras-bundle": {
+        "version": "2.45.5"
+    },
+    "survos/workflow-messenger-bundle": {
+        "version": "2.43.23"
     },
     "symfony/ai-anthropic-platform": {
         "version": "1.0",
@@ -263,6 +266,18 @@
             ".editorconfig"
         ]
     },
+    "symfony/lock": {
+        "version": "8.2",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "8.2",
+            "ref": "472277fb1c5d4445a9f474a9c2dd66c9b59a3167"
+        },
+        "files": [
+            "config/packages/lock.yaml"
+        ]
+    },
     "symfony/mailer": {
         "version": "8.1",
         "recipe": {
@@ -356,6 +371,18 @@
         "files": [
             "config/packages/security.yaml",
             "config/routes/security.yaml"
+        ]
+    },
+    "symfony/security-csrf": {
+        "version": "8.2",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "8.2",
+            "ref": "939ab3e95126f02c1d7a481abf72c40f810ea1cb"
+        },
+        "files": [
+            "config/packages/csrf_protection.yaml"
         ]
     },
     "symfony/stimulus-bundle": {
