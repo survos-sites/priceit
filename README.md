@@ -32,8 +32,10 @@ the mobile app just starts a new item.
 
 For the proposed evolution into an MCP-powered acquisition PWA, see the
 [Scanfony architecture and design proposal](docs/scanfony.md). It builds on the
-existing capture queue, AI pricing service, and item workflow; proposed features
-are distinguished from the current implementation.
+existing capture queue, AI pricing service, and item workflow. A patch-collection
+example explains the generic acquisition, follow-up, matches, and actions contract,
+with museum inventory and the medical loan closet as real-world applications.
+Proposed features are distinguished from the current implementation.
 
 Two front ends, one Symfony backend, one SQLite database:
 

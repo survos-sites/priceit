@@ -9,7 +9,8 @@ remains the first domain application and the repository name.
 ## Product flow
 
 **Add server → synchronize advertised tools → select outcome environment → acquire
-evidence → execute → persist results → notify and review.** The built-in server is
+evidence → execute → follow up if needed → review matches/results → choose an action.**
+Persist each round and notify the PWA and subscribed systems as it becomes available. The built-in server is
 preconfigured, so the first capture does not require an external server.
 
 An outcome environment supplies the context for capture, the expected result, and
@@ -22,9 +23,10 @@ batch processing.
 
 | Environment | Evidence and questions | Expected result |
 |---|---|---|
+| Patch Collection | Front/reverse photos, border details, lettering, dimensions | Ranked collection records, follow-up evidence requests and explicit actions |
 | Garage Sale Price | Overall/detail/mark photos, spoken history, condition, currency | Identification, suggested description and price, uncertainty and supporting evidence |
 | Medical Equipment | Device/label/serial photos, condition, inventory location | Equipment identity, catalog fields, proposed inventory label; no clinical diagnosis or default price |
-| Museum Identification | Multiple views, dimensions, maker marks, provenance notes | Candidate matches, source references, confidence and catalog draft |
+| Museum Identification | Multiple views, accession labels, dimensions, maker marks | Authorized inventory matches, supporting evidence and unresolved differences |
 | OCR document | Ordered page images, language, document type | Page-associated text and structured fields with source-image references |
 | Handwriting | Ordered pages/detail crops, language and transcription preferences | Transcription, uncertain spans and page references |
 
@@ -181,6 +183,289 @@ arbitrary tool. Pin the catalog/schema hash in each acquisition session. Before
 submission, validate against that snapshot and verify the tool is still authorized
 and compatible. A changed/removed tool requires user review, not silent rebinding.
 
+## Plugin contract: find a patch in a collection
+
+A plugin is a configured MCP endpoint, not downloaded application code. The hackathon
+repository hosts the camera PWA and sample MCP tools together; real deployments can
+connect the same PWA to Harvest, Ink, museum inventories or other authorized backends.
+One endpoint may advertise several outcomes. The app has reusable acquisition and
+review components; domain-specific recognition, catalog access and actions stay on
+the backend. OCR is an internal capability of identification, not the principal demo.
+
+The concrete example is an Order of the Arrow patch collection: take a front photo,
+search the collection, resolve ambiguous candidates with another view or answer,
+review matches, and optionally confirm a record or print its label. Finding a record
+in a particular collection is a stronger, different promise than describing a patch.
+Use supplied reference records/images; do not imply a collection dataset is already
+available or invent catalog facts to make the demonstration work.
+
+### Discovery and initial acquisition
+
+MCP provides `tools/list`, `inputSchema`, optional `outputSchema`, and tool results
+with `structuredContent`. It does not prescribe a camera workflow or interpret an
+arbitrary URL argument as a request for document images. See the
+[MCP tool contract](https://modelcontextprotocol.io/specification/2025-11-25/server/tools).
+The following versioned `_meta.scanfony` convention is a **proposed application
+extension**, not a new MCP method or an existing standard. Unknown versions must
+not be guessed. Generate schemas and metadata from typed PHP definitions and the
+registered tool; the JSON below illustrates the wire advertisement, not another
+configuration file to maintain.
+
+An abbreviated tool advertisement (input/output schemas omitted here) is:
+
+```json
+{
+  "name": "identify_collection_item",
+  "title": "Find a patch in my collection",
+  "description": "Find candidate records in the connected patch collection.",
+  "_meta": {
+    "scanfony": {
+      "version": 1,
+      "contract": "acquisition-result/v1",
+      "acquisition": [
+        {
+          "id": "front",
+          "kind": "photo",
+          "binding": "/evidence/front",
+          "label": "Front of the patch",
+          "instruction": "Include the whole patch and its border."
+        },
+        {
+          "id": "reverse",
+          "kind": "photo",
+          "binding": "/evidence/reverse",
+          "label": "Back of the patch"
+        }
+      ],
+      "presentation": "record-matches"
+    }
+  }
+}
+```
+
+The actual input schema declares `evidence.front` required, `evidence.reverse`
+optional, each as an array of asset references with minimum/maximum counts and
+accepted MIME types. A shared asset-reference DTO contains an opaque asset ID,
+checksum, MIME type and an authorized retrieval reference; a remote server needs
+an explicitly usable retrieval URL/resource, not a local storage key. Scanfony's
+upload service creates those references before the MCP call. MCP tool discovery
+itself does not provide a binary-upload protocol.
+
+The contract also declares `answers` (initially empty), optional
+`continuationToken`, and a client-generated `submissionId` for retry deduplication.
+Bindings use JSON Pointer into the invocation arguments. Requiredness, enums and
+limits come from the authoritative schema, not duplicated UI flags. Labels and
+instructions provide presentation semantics; they are never executable templates.
+The server chooses and authorizes the collection from connection/user context or
+an explicitly advertised selector. The app never assumes a global public catalog.
+
+### One generic response envelope, including follow-up
+
+The published output schema describes `acquisition-result/v1` as a discriminated
+contract with these fields:
+
+| Field | Meaning |
+|---|---|
+| `status` | `needs_input`, `completed`, or `no_match`. Operational failures use the execution/MCP error channel. |
+| `continuationToken` | Required for `needs_input`; opaque, expiring, bound to owner, connection, tool, catalog snapshot and prior evidence. |
+| `requests` | Generic capture controls with stable IDs and bindings into the next call's evidence/answers. |
+| `responseSchema` | For `needs_input`, a JSON Schema for the next response's `evidence` and `answers`; sole source of follow-up requiredness and validation. |
+| `matches` | Ordered candidate records with stable ID, title, optional reference image/record URL, supporting evidence, differences and unresolved evidence. |
+| `sections` | Optional generic Markdown, images or labeled-value sections, rendered through an allowlisted vocabulary. |
+| `actions` | Explicit available actions referencing authorized discovered tools and validated argument bindings. |
+
+A follow-up result in MCP `structuredContent` might be:
+
+```json
+{
+  "status": "needs_input",
+  "continuationToken": "opaque-token-round-1",
+  "matches": [
+    {
+      "id": "record-123",
+      "title": "Example collection record A",
+      "imageUrl": "https://collection.example/images/123.jpg",
+      "recordUrl": "https://collection.example/records/123",
+      "evidence": ["Visible lettering matches the reference record"],
+      "differences": [],
+      "unresolved": ["Border detail is unclear"]
+    }
+  ],
+  "requests": [
+    {
+      "id": "border-detail",
+      "kind": "photo",
+      "binding": "/evidence/border-detail",
+      "label": "Photograph the border",
+      "instruction": "Move closer and include a section of the outer edge."
+    },
+    {
+      "id": "border-color",
+      "kind": "choice",
+      "binding": "/answers/border-color",
+      "label": "Which border color do you see?"
+    }
+  ],
+  "responseSchema": {
+    "type": "object",
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "properties": {
+          "border-detail": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {"$ref": "#/$defs/assetReference"}
+          }
+        },
+        "required": ["border-detail"],
+        "additionalProperties": false
+      },
+      "answers": {
+        "type": "object",
+        "properties": {
+          "border-color": {"type": "string", "enum": ["red", "orange", "unsure"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "required": ["evidence"],
+    "additionalProperties": false,
+    "$defs": {
+      "assetReference": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "checksum": {"type": "string"},
+          "mimeType": {"type": "string", "enum": ["image/jpeg", "image/png"]},
+          "uri": {"type": "string", "format": "uri"}
+        },
+        "required": ["id", "checksum", "mimeType", "uri"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "sections": [],
+  "actions": []
+}
+```
+
+Record names/colors above are hypothetical, not assertions about the collection.
+The example embeds `$defs.assetReference`; generate that definition from the shared
+DTO and emit a self-contained schema. The static tool input schema uses separate initial/continuation branches: the initial
+branch requires the front image and the continuation branch requires the token,
+submission ID and contract-shaped evidence/answers maps (not another front image); the server additionally validates them against the response schema saved for
+that token. The client applies the same validation. This is an instance-specific
+request for evidence, not a change to the discovered tool definition each round.
+
+The app submits only the new evidence/answers plus the token and a new submission
+ID to the same tool. The backend merges immutable evidence references, checks the
+expected round, and returns a replayable result for duplicate submissions. Reject
+stale or cross-owner tokens; offer an explicit restart if the token expired. A new
+round replaces outstanding requests rather than silently accumulating obsolete ones.
+The user can stop and retain provisional matches without fabricating a required
+answer. An unavailable control kind blocks that request with a clear explanation;
+unknown result presentation can fall back to a safe structured-data view.
+
+Supported MVP control kinds are `photo`, `audio`, `choice`, `text`, and `number`;
+labels, units, enum values and evidence roles are data. The app contains no check
+for the word “patch,” a lodge number, or the tool's name. Apply size/count/round
+limits and sanitize rendered Markdown/URLs; the endpoint cannot send executable UI.
+
+### Matches, confirmation and actions
+
+A generic record renderer shows candidate cards with reference images, evidence,
+unresolved differences and source-record links. `completed` means the search round
+has finished, not that identity has been verified. Several candidates may remain;
+`no_match` means no supported match in the searched collection, not that the object
+is unknown everywhere. Do not turn an arbitrary model score into a calibrated
+confidence percentage. Keep user confirmation separate from candidate ranking.
+
+Actions may appear on a completed result or a selected candidate. For example:
+
+```json
+{
+  "id": "print-label",
+  "title": "Print inventory label",
+  "tool": "print_inventory_label",
+  "bindings": {
+    "/recordId": {"source": "selectedMatch", "pointer": "/id"}
+  },
+  "requiresConfirmation": true
+}
+```
+
+Resolve the tool within the originating connection by default; do not resolve an
+unqualified name across arbitrary servers. Cross-connection routing requires an
+explicit local approved mapping. `bindings` maps target argument JSON Pointers to
+allowlisted data sources, not expressions or scripts. Additional required inputs
+such as printer destination come from that action tool's own schema/acquisition
+metadata. Recheck tool availability, ownership and argument validity at click time.
+The backend reauthorizes the selected record; an advertised action is not permission.
+Local policy always requires confirmation for printing or other side effects, even
+if a server omits or falsifies `requiresConfirmation`.
+
+Confirming a match, updating inventory and printing are distinct operations with
+separate executions, idempotency keys and audit records. Label layout and catalog
+fields belong to the backend; printer routing belongs to an approved backend or
+explicitly configured local print integration. Merely displaying a candidate must
+never print, publish or write to inventory.
+
+### Recognition is semantic retrieval, not exact pixel matching
+
+For patches, describe observed shape, colors, border, lettering, numbers and motifs;
+use OCR where it helps read text. Search structured catalog fields and semantic text
+representations of records, then compare candidate evidence with the photograph.
+Visual embeddings can supplement that retrieval without requiring identical pixels.
+Preserve the observations and source regions separately from inferred identity:
+uncertain lettering must not become a hard filter that rules out the correct record.
+Ask for the view or measurement that distinguishes remaining candidates. Reuse the
+existing Symfony AI Mistral OCR integration and DTOs as an internal capability.
+
+Coins are another proposed application: photograph both sides and, when useful, the
+edge; describe the design and read denomination, date, legends and mint mark where
+visible. A nickel could be retrieved from that description and those attributes,
+then compared with catalog candidates. The backend must not assume denomination,
+country, material, date or authenticity solely from an initial model description.
+Text retrieval, exact identifiers and visual features can work together; “description
+match” is the starting strategy, not a claim that all AI recognition is text-only.
+
+Identification and valuation are separate steps. A proposed coin-value result should
+state the matched variety, unresolved condition/authenticity questions, currency,
+valuation date and sources for comparable sales. It should decline a precise value
+when the evidence is inadequate. This design does not supply a valuation model,
+current market prices, grading capability or catalog dataset.
+
+## Real-world applications and reusable product
+
+The patch collection is the contract example; garage-sale pricing and the medical
+loan closet remain real application foundations. Museum inventory is a principal
+integration opportunity: connect an institution's own catalog and permissions,
+identify accession marks and objects, resolve ambiguous records, and support reviewed
+inventory actions. The value is helping staff use their institutional records in the
+field, not just asking a general model to name an object. Catalog ingestion, record
+normalization, matching quality and workflow integration are substantive delivery work.
+
+| Outcome backend | Evidence and follow-up | Generic result/action |
+|---|---|---|
+| Patch collection | Front/reverse, border close-up, dimensions | Record matches → confirm → optional collection label |
+| Garage-sale pricing | Multiple views, maker mark, condition | Identification and sourced price suggestion → reviewed price tag |
+| Medical loan closet | Device/model/serial label, accessories, condition | Inventory matches or catalog draft → confirm → asset label; no clinical assessment |
+| Museum inventory | Object, accession label, underside, dimensions | Authorized inventory candidates and evidence → confirm/link record |
+| Coin collection/value | Both sides, edge, date/mark detail, measurements | Catalog candidates → separately qualified valuation with sources |
+| Wine information | Front/back labels and vintage detail | Identified wine and sourced information |
+| School-lunch tray analysis | Whole tray, portions and obscured ingredients | Food observations and nutrition estimates with explicit uncertainty |
+| Replacement parts/manual lookup | Part and model plate, connector/detail photo | Compatible catalog candidates and documentation links |
+
+Wine, coins, lunch trays and parts are possible follow-on backends, not delivered
+features. The user recalls a prior Mechanical Turk school-lunch identification
+project; availability, rights and suitability of its raw data remain unverified.
+Food identification alone cannot establish portion weights, ingredients or calories.
+Likewise, a museum catalog match does not by itself establish authenticity or value.
+These outcomes can reuse capture controls and result sections without pretending
+that the domain data, evaluation or integration work disappears.
+
 ## Acquisition and optional per-image analysis
 
 Create a session before capture with a client UUID, selected outcome and catalog
@@ -220,7 +505,8 @@ All records belong to an owner/workspace even while the demo uses a single works
 | `ServerConnection` | Owner, alias, endpoint, transport, encrypted credential reference, capabilities, enabled flag, last successful sync/error. Built-in is a distinguished local connection. |
 | `ToolSnapshot` | Connection, original tool name, revision/hash, advertised schemas/metadata, sync timestamp. Immutable snapshots support replay/audit; not independently editable definitions. |
 | `OutcomePreset` | Owner, snapshot/tool reference, display preferences and approved adapter reference; no duplicate tool schema. |
-| `AcquisitionSession` | Owner, client UUID, outcome/snapshot, revision, capture state, timestamps. Unique owner + client UUID. |
+| `AcquisitionSession` | Owner, client UUID, outcome/snapshot, revision, capture state, outcome state (`collecting`, `awaiting_input`, `completed`, `no_match`, `stopped`), timestamps. Unique owner + client UUID. |
+| `AcquisitionRound` | Session, round number, immutable submitted revision, execution/result reference, outstanding requests/response schema, protected continuation-token reference and expiry. Unique session + round number. |
 | `AcquisitionAsset` | Session, client UUID, kind, role, ordinal, private storage key, MIME/size/checksum, upload state, optional existing `Media` link. Unique session + client UUID. |
 | `AcquisitionAnswer` | Session revision, question key, typed value, source (user or accepted suggestion), update time. |
 | `AssetAnalysis` | Asset checksum, engine/model version, state, structured classification/transcription, confidence, error; unique analysis request key. |
@@ -239,7 +525,15 @@ prices and edits. Track inventory approval separately from execution success.
 
 Acquisition states: `draft → ready → submitted`, with `abandoned` available before
 submission. “Ready” means required answers and assets are validated, not merely that
-the browser finished collecting them. Upload and analysis states are independent.
+the browser finished collecting them. These capture states apply to each immutable
+round revision. Upload and analysis states are independent.
+
+A successfully executed round can return `needs_input`: its execution is `succeeded`,
+but the session outcome becomes `awaiting_input`. Persist the provisional matches,
+requests and continuation token; the next response creates a new round/revision and
+execution, leaving the prior result immutable. No worker waits for a user. Stopping
+follow-up preserves provisional results and marks the session `stopped`. `completed`
+and `no_match` close the outcome without claiming the user confirmed any identity.
 
 Execution states:
 
@@ -316,6 +610,8 @@ existing code. `/mcp` carries MCP JSON-RPC methods; REST paths are not MCP metho
 | `POST /api/scanfony/sessions/{id}/assets/{assetId}/complete` | Verify uploaded object and checksum; enqueue optional analysis once. |
 | `PATCH /api/scanfony/sessions/{id}` | Update ordered assets/answers using expected revision; stale updates return `409`. |
 | `POST /api/scanfony/sessions/{id}/executions` | Validate/freeze revision; accept idempotency key, execution preference and approved completion subscription IDs; `201` if completed inline, otherwise `202` with `Location`. |
+| `POST /api/scanfony/sessions/{id}/responses` | Submit expected round/revision, new evidence/answers and idempotency key; validate stored response schema/token and create the next round execution. Reject stale rounds with `409`. |
+| `POST /api/scanfony/executions/{id}/actions/{actionId}` | Resolve stored action and selected match, gather/validate required arguments, authorize and confirm side effects, create separate idempotent action execution. |
 | `GET /api/scanfony/executions/{id}` | Durable state, progress, errors and authorized result reference; polling/ETag baseline. |
 | `GET /api/scanfony/executions/{id}/result` | Stored result after completion; expose no raw credential/private storage keys. |
 | `POST /api/scanfony/executions/{id}/cancel` | Request best-effort cancellation; report actual state. |
@@ -337,6 +633,13 @@ notifications independently. Polling restores the PWA after reconnect/relaunch;
 SSE/Mercure or opt-in Web Push can improve immediacy later. A push or SSE event is
 only a hint to fetch the authorized execution. Do not rely on a closed PWA running
 background JavaScript, and do not put sensitive result content into push payloads.
+
+An execution-completion event refers to one processing round, not necessarily the
+whole identification outcome. Include session ID, round ID and `outcomeStatus` so
+`needs_input` triggers a request for evidence rather than a false final-result notice.
+Explicit session events (`session.input_required`, `session.completed`,
+`session.no_match`) can be subscribed to separately and are persisted with the same
+transactional outbox. Action executions have their own completion events.
 
 An outgoing webhook contains a version, stable event ID, event type
 (`execution.succeeded`, `execution.failed`, or `execution.cancelled`), execution ID,
@@ -397,13 +700,16 @@ those separately, including the current Composer `proprietary` license declarati
    migrations; protect new APIs and private evidence. Verify fresh database setup
    and the deployed Postgres path rather than repeating the handoff's schema-update
    workaround. Preserve existing PriceIt capture and review behavior.
-2. **Built-in vertical slice:** expose Garage Sale Price via `#[McpTool]`, select it
-   from the default catalog, capture multiple photos plus voice and a condition
-   answer, and run the existing AI service through the coordinator. Persist/link the
-   result to an Item without replacing user edits.
-3. **Remote discovery:** add one authenticated test MCP server, synchronize its tool
-   schema, execute a compatible OCR outcome, and demonstrate that a changed schema
-   needs revalidation. Reuse the upstream bridge when an agent invokes remote tools.
+2. **Patch collection vertical slice:** obtain a small authorized reference collection
+   (clearly label synthetic fixtures if needed), expose the identification tool via
+   `#[McpTool]`, and advertise the generic acquisition/result contract. Demonstrate
+   a front photo, ambiguous matches, a requested close-up or answer, and reviewed
+   record selection. OCR is a pipeline capability; no patch-specific frontend code.
+3. **Real application and remote discovery:** adapt existing Garage Sale Price through
+   the same coordinator, preserving human edits and the loan-closet profile. Connect
+   one external/test MCP endpoint and show that changing backend requires no camera
+   code changes. Verify schema revalidation and an explicit label action. Reuse the
+   upstream bridge when an agent invokes remote tools.
 4. **Durable completion:** show both inline and queued processing, browser-close
    recovery, signed webhook delivery/retry, and a batch adapter contract. A fake
    provider can test delayed batch completion; real provider batch integration is a
@@ -412,7 +718,7 @@ those separately, including the current Composer `proprietary` license declarati
    available; the no-classifier path must still work. Add the other environment
    adapters incrementally using the same acquisition model.
 
-The UI may describe all five target environments, but only enabled, working adapters
+The UI may describe the target environments, but only enabled, working adapters
 can be selected as executable. Medical Equipment can reuse the existing profile;
 Museum Identification and Handwriting need explicit adapters/results before being
 presented as working. Keep arbitrary workflow composition, unrestricted server
@@ -420,6 +726,20 @@ execution, native mobile wrappers, and automatic publication out of the MVP.
 
 ## Acceptance criteria
 
+- [ ] Patch acquisition, a follow-up photo/choice, ranked matches, no-match and
+      confirmation/action screens are driven by advertised schemas and metadata;
+      there are no patch/tool-name branches in the camera app.
+- [ ] A second backend uses the same controls and renderer without frontend changes.
+      OCR/semantic retrieval is evaluated with known reference records, including
+      ambiguous and absent matches, rather than only a successful demonstration.
+- [ ] Follow-up survives reload; duplicate replies replay the same round result,
+      stale/cross-owner tokens are rejected, and expired tokens offer a restart.
+      Unsupported controls/versions are reported explicitly.
+- [ ] A `needs_input` round completes its execution without claiming the outcome is
+      finished. Stopping preserves provisional results; session notifications distinguish
+      required input from final completion.
+- [ ] A candidate never triggers an action automatically. Printing requires explicit
+      confirmation, reauthorization and an idempotent separate action execution.
 - [ ] A fresh clone runs the PWA, built-in server and worker from this repository
       using documented setup and migrations; no second application repository is required.
 - [ ] The default Garage Sale Price outcome works without adding an external server;
