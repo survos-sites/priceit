@@ -6,6 +6,134 @@
     overflow: hidden;
 }
 
+.capture-camera-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    color: #fff;
+}
+.capture-camera-overlay[hidden] {
+    display: none !important;
+}
+.capture-camera-header {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(rgb(0 0 0 / 64%), rgb(0 0 0 / 38%), transparent);
+}
+.capture-camera-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: env(safe-area-inset-top) 16px 0;
+    font-size: 18px;
+}
+.capture-camera-done {
+    padding: 8px 0 8px 16px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    width: auto;
+}
+.capture-camera-bottom-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+.capture-camera-control-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+}
+.capture-camera-control-group-right {
+    justify-content: flex-end;
+}
+.capture-camera-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    min-width: 64px;
+    min-height: 50px;
+    padding: 4px 10px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+}
+.capture-camera-control[hidden] {
+    display: none !important;
+}
+.capture-camera-control-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+.capture-camera-control-value svg {
+    width: 20px;
+    height: 20px;
+}
+.capture-camera-control-label {
+    margin-top: 2px;
+    color: rgb(255 255 255 / 72%);
+    font-size: 11px;
+}
+.capture-camera-overlay .capture-video-wrap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    flex: none;
+    aspect-ratio: auto;
+    border-radius: 0;
+}
+.capture-camera-overlay .capture-video-wrap.capture-ratio-square,
+.capture-camera-overlay .capture-video-wrap.capture-ratio-standard,
+.capture-camera-overlay .capture-video-wrap.capture-ratio-wide {
+    inset: 50% auto auto 50%;
+    width: min(100%, calc(100vh - 220px));
+    height: auto;
+    max-height: calc(100% - 220px);
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+}
+.capture-camera-overlay .capture-video-wrap.capture-ratio-standard {
+    aspect-ratio: 4 / 3;
+}
+.capture-camera-overlay .capture-video-wrap.capture-ratio-wide {
+    aspect-ratio: 16 / 9;
+}
+@media (orientation: portrait) {
+    .capture-camera-overlay .capture-video-wrap.capture-ratio-standard {
+        width: min(100%, calc((100vh - 220px) * .75));
+        aspect-ratio: 3 / 4;
+    }
+    .capture-camera-overlay .capture-video-wrap.capture-ratio-wide {
+        width: min(100%, calc((100vh - 220px) * .5625));
+        aspect-ratio: 9 / 16;
+    }
+}
+.capture-camera-controls { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); color: #fff; text-align: center; background: linear-gradient(transparent, rgb(0 0 0 / 72%)); }
+.capture-camera-controls > span { display: block; margin-bottom: 8px; font-size: 14px; }
+.capture-camera-controls p { margin: 8px 0 0; font-size: 13px; }
+.capture-shutter { display: block; width: 64px; height: 64px; margin: 0 auto; border: 5px solid rgba(255,255,255,.8); border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.capture-shutter:active { transform: scale(.94); }
+
 .capture-video-wrap video {
     width: 100%;
     height: 100%;
@@ -30,6 +158,7 @@
     height: 100%;
     object-fit: cover;
     border-radius: 6px;
+    cursor: zoom-in;
 }
 
 .capture-thumb button {
@@ -46,6 +175,79 @@
     cursor: pointer;
 }
 
+.capture-add-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 84px;
+    height: 84px;
+    padding: 8px;
+    border: 2px dashed #8e8e93;
+    border-radius: 6px;
+    color: #4f5f91;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+}
+.capture-add-more svg { width: 24px; height: 24px; }
+
+.capture-action-button {
+    flex-direction: column;
+    min-height: 96px;
+    line-height: 2 !important;
+}
+.capture-action-button svg { width: 30px; height: 30px; }
+
+.capture-actions .actions-group:first-child .actions-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+}
+.capture-actions .actions-group:first-child .actions-button svg {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+}
+
+.empty-state {
+    margin: 0;
+    padding: 32px 20px;
+    border-radius: 14px;
+}
+.empty-state-icon {
+    display: block;
+    margin: 0 auto 12px;
+    color: var(--f7-theme-color);
+    font-size: 42px;
+}
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+.empty-state-text {
+    max-width: 360px;
+    margin: 8px auto 20px;
+    color: var(--f7-list-item-subtitle-text-color);
+    font-size: 14px;
+    line-height: 1.4;
+}
+.empty-state .button {
+    max-width: 280px;
+    margin: 0 auto;
+}
+.empty-state .button svg {
+    margin-right: 6px;
+    font-size: 18px;
+    vertical-align: -2px;
+    width: 18px;
+    height: 18px;
+}
 
 /* The note. One field whether it was typed or dictated. Interim dictation is
    greyed because the engine is still revising those words — they change under
@@ -70,38 +272,3 @@
 }
 
 
-/* What kind of thing this is. Above the print toggle because it changes what the
-   label will say, so it has to be chosen before deciding whether to print it. */
-.capture-profile {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin: 12px 12px 0;
-    font-size: 15px;
-    color: #1c1c1e;
-}
-.capture-profile-select {
-    /* 44px is the smallest comfortable touch target, and this gets used one-handed
-       while holding the item in the other. 16px stops iOS zooming the page on focus. */
-    flex: 1;
-    min-height: 44px;
-    padding: 0 10px;
-    font-size: 16px;
-    color: inherit;
-    background: #fff;
-    border: 1px solid #c7c7cc;
-    border-radius: 8px;
-}
-
-/* Print-now toggle. Sits under the buttons because it describes what happens
-   after Save, not another thing to press. */
-.capture-print {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 12px 12px 0;
-    font-size: 15px;
-    color: #1c1c1e;
-}
-.capture-print input { width: 20px; height: 20px; }

@@ -11,7 +11,7 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'thumbs', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput', 'price'];
+  static targets = ['video', 'videoFrame', 'ratioLabel', 'cameraSwitch', 'cameraSwitchLabel', 'flashControl', 'flashLabel', 'flashOnIcon', 'flashOffIcon', 'thumbs', 'captureCount', 'addMoreTemplate', 'photoActions', 'photoTitle', 'cameraOverlay', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput', 'nativeFileInput', 'price'];
   static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
 
   connect() {
@@ -22,7 +22,22 @@ export default class extends Controller {
     this.notePrefix = '';
     this._onConnectivityChange = () => this._updateSpeechAvailability();
     this.photos = [];
+    this.aspectRatioIndex = 0;
+    this.cameraDeviceId = null;
+    this.cameraDevices = [];
+    this.flashOn = false;
     this.audioBlob = null;
+    this._updatePhotoActions();
+    this.cameraOpen = false;
+    this.videoElement = this.videoTarget;
+    this.shutter = this.element.querySelector('.capture-shutter');
+    this.captureCountElement = this.element.querySelector('[data-capture-target="captureCount"]');
+    this.actionSnap = this.element.querySelector('.capture-action-snap');
+    this.actionUpload = this.element.querySelector('.capture-action-upload');
+    this._onActionSnap = (event) => this.openCamera(event);
+    this._onActionUpload = (event) => this.pickFiles(event);
+    this.actionSnap?.addEventListener('click', this._onActionSnap);
+    this.actionUpload?.addEventListener('click', this._onActionUpload);
 
     this.queue = new CaptureQueue({ endpoint: this.captureUrlValue });
     this.queue.onProgress = () => this._refreshPendingCount();
@@ -48,16 +63,14 @@ export default class extends Controller {
       // Storage blocked: the template default stands.
     }
 
-    this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
-
     // Let go of the camera whenever this tab is out of sight. Android Chrome gives the camera
     // to one tab at a time, and a capture tab left open in the background was holding it, so
     // the Price it page showed a black screen.
     this._onVisibility = () => {
       if (document.hidden) {
         this.camera.close();
-      } else {
-        this.camera.open(this.videoTarget).catch((err) => this._setStatus(`Camera error: ${err.message}`));
+      } else if (this.cameraOpen) {
+        this.camera.open(this.videoElement, this.cameraDeviceId).then(() => this._refreshCameraDevices()).catch((err) => this._setStatus(`Camera error: ${err.message}`));
       }
     };
     document.addEventListener('visibilitychange', this._onVisibility);
@@ -77,6 +90,9 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.actionSnap?.removeEventListener('click', this._onActionSnap);
+    this.actionUpload?.removeEventListener('click', this._onActionUpload);
+    this.closeCamera();
     document.removeEventListener('visibilitychange', this._onVisibility);
     this.camera.close();
     this.audio.cancel();
@@ -88,17 +104,174 @@ export default class extends Controller {
 
   async snap() {
     try {
-      const blob = await this.camera.capture();
+      const blob = await this._captureVisibleFrame();
       this.photos.push(blob);
       this._renderThumbs();
+      this._updatePhotoActions();
+      if (this.captureCountElement) this.captureCountElement.textContent = `${this.photos.length} Photo${this.photos.length === 1 ? '' : 's'}`;
+      window.app?.toast.create({ text: `Photo captured · ${this.photos.length} photo${this.photos.length === 1 ? '' : 's'} saved`, closeTimeout: 2200 }).open();
     } catch (err) {
       this._setStatus(`Capture failed: ${err.message}`);
     }
   }
 
+  async _captureVisibleFrame(quality = 0.9) {
+    const video = this.videoElement;
+    const { videoWidth: w, videoHeight: h } = video;
+    if (!w || !h) throw new Error('Camera is not ready');
+
+    const displayWidth = video.clientWidth;
+    const displayHeight = video.clientHeight;
+    const sourceAspect = w / h;
+    const displayAspect = displayWidth > 0 && displayHeight > 0
+      ? displayWidth / displayHeight
+      : sourceAspect;
+    let sx = 0;
+    let sy = 0;
+    let sw = w;
+    let sh = h;
+
+    if (sourceAspect > displayAspect) {
+      sw = Math.round(h * displayAspect);
+      sx = Math.round((w - sw) / 2);
+    } else if (sourceAspect < displayAspect) {
+      sh = Math.round(w / displayAspect);
+      sy = Math.round((h - sh) / 2);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('capture failed'))), 'image/jpeg', quality);
+    });
+  }
+
+  openCamera(event) {
+    event?.preventDefault();
+    this._closeActionSheet();
+    if (this.cameraOpen) return;
+    this.cameraOpen = true;
+    this.cameraOverlayTarget.hidden = false;
+    this._hideAppChrome();
+    this._updateCaptureCount();
+    this.camera.open(this.videoElement, this.cameraDeviceId)
+      .then(() => this._refreshCameraDevices())
+      .catch((err) => this._setStatus(`Camera error: ${err.message}`));
+  }
+
+  closeCamera() {
+    this.cameraOpen = false;
+    if (this.hasCameraOverlayTarget) this.cameraOverlayTarget.hidden = true;
+    this.camera.close();
+    this._showAppChrome();
+  }
+
+  async _refreshCameraDevices() {
+    if (!this.hasCameraSwitchTarget || !navigator.mediaDevices?.enumerateDevices) return;
+    this.cameraDevices = (await navigator.mediaDevices.enumerateDevices())
+      .filter((device) => device.kind === 'videoinput');
+    this._refreshFlashCapability();
+    const currentDeviceId = this.camera.stream?.getVideoTracks()[0]?.getSettings?.().deviceId;
+    this.cameraDeviceId = currentDeviceId || this.cameraDeviceId;
+    this.cameraSwitchTarget.hidden = this.cameraDevices.length < 2;
+    if (this.cameraSwitchTarget.hidden) return;
+    const current = this.cameraDevices.find((device) => device.deviceId === this.cameraDeviceId);
+    this.cameraSwitchLabelTarget.textContent = this._cameraLabel(current?.label);
+  }
+
+  async switchCamera() {
+    if (this.cameraDevices.length < 2) return;
+    const currentIndex = this.cameraDevices.findIndex((device) => device.deviceId === this.cameraDeviceId);
+    const next = this.cameraDevices[(currentIndex + 1) % this.cameraDevices.length];
+    if (!next) return;
+    this.cameraDeviceId = next.deviceId;
+    try {
+      await this.camera.open(this.videoElement, this.cameraDeviceId);
+      this.flashOn = false;
+      this._refreshFlashCapability();
+      this.cameraSwitchLabelTarget.textContent = this._cameraLabel(next.label);
+    } catch (err) {
+      this._setStatus(`Camera switch failed: ${err.message}`);
+    }
+  }
+
+  _cameraLabel(label) {
+    return /front|user|facetime|selfie/i.test(label || '') ? 'Front' : 'Rear';
+  }
+
+  _refreshFlashCapability() {
+    if (!this.hasFlashControlTarget) return;
+    const track = this.camera.stream?.getVideoTracks()[0];
+    const supported = Boolean(track?.getCapabilities?.().torch);
+    this.flashControlTarget.hidden = !supported;
+    this.flashOn = false;
+    this._updateFlashUi();
+  }
+
+  async toggleFlash() {
+    const track = this.camera.stream?.getVideoTracks()[0];
+    if (!track?.getCapabilities?.().torch) return;
+    this.flashOn = !this.flashOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: this.flashOn }] });
+      this._updateFlashUi();
+    } catch (err) {
+      this.flashOn = false;
+      this._updateFlashUi();
+      this.flashControlTarget.hidden = true;
+      this._setStatus(`Flash unavailable: ${err.message}`);
+    }
+  }
+
+  _updateFlashUi() {
+    if (this.hasFlashLabelTarget) this.flashLabelTarget.textContent = this.flashOn ? 'On' : 'Off';
+    if (this.hasFlashOnIconTarget) this.flashOnIconTarget.hidden = !this.flashOn;
+    if (this.hasFlashOffIconTarget) this.flashOffIconTarget.hidden = this.flashOn;
+  }
+
+  cycleAspectRatio() {
+    const ratios = ['capture-ratio-full', 'capture-ratio-square', 'capture-ratio-standard', 'capture-ratio-wide'];
+    this.aspectRatioIndex = (this.aspectRatioIndex + 1) % ratios.length;
+    this.videoFrameTarget.classList.remove(...ratios);
+    const ratio = ratios[this.aspectRatioIndex];
+    this.videoFrameTarget.classList.add(ratio);
+
+    const labels = {
+      'capture-ratio-full': 'Full',
+      'capture-ratio-square': '1:1',
+      'capture-ratio-standard': window.matchMedia('(orientation: portrait)').matches ? '3:4' : '4:3',
+      'capture-ratio-wide': window.matchMedia('(orientation: portrait)').matches ? '9:16' : '16:9',
+    };
+    this.ratioLabelTarget.textContent = labels[ratio];
+  }
+
+  _hideAppChrome() {
+    if (!window.app) return;
+    window.app.navbar?.hide('.view-main .navbar', false, true);
+    window.app.toolbar?.hide('.view-main .toolbar.tabbar', false);
+  }
+
+  _showAppChrome() {
+    if (!window.app) return;
+    window.app.navbar?.show('.view-main .navbar', false);
+    window.app.toolbar?.show('.view-main .toolbar.tabbar', false);
+  }
+
   /** Opens the native picker. The <input> stays hidden so the button matches the others. */
-  pickFiles() {
+  pickFiles(event) {
+    event?.preventDefault();
+    this._closeActionSheet();
     this.fileInputTarget.click();
+  }
+
+  _closeActionSheet() {
+    window.app?.actions?.close('.capture-actions');
+  }
+
+  openNativeCamera() {
+    this.nativeFileInputTarget.click();
   }
 
   /**
@@ -126,7 +299,9 @@ export default class extends Controller {
 
     this.photos.push(...chosen);
     this._renderThumbs();
-    this._setStatus(`Added ${chosen.length} photo${chosen.length === 1 ? '' : 's'}`);
+    this._updatePhotoActions();
+    if (this.captureCountElement) this.captureCountElement.textContent = `${this.photos.length} Photo${this.photos.length === 1 ? '' : 's'}`;
+    this._setStatus(`Added ${chosen.length} Photo${chosen.length === 1 ? '' : 's'}`);
 
     // Cleared so picking the same file twice in a row still fires a change event.
     event.target.value = '';
@@ -136,6 +311,8 @@ export default class extends Controller {
     const index = Number(event.currentTarget.dataset.index);
     this.photos.splice(index, 1);
     this._renderThumbs();
+    this._updatePhotoActions();
+    this._updateCaptureCount();
   }
 
   async toggleAudio() {
@@ -260,8 +437,10 @@ export default class extends Controller {
     this._setStatus('Queued — uploading in the background');
     this.photos = [];
     this.clearNote();
+    if (this.captureCountElement) this.captureCountElement.textContent = '0 Photos';
     if (this.hasPriceTarget) this.priceTarget.value = '';
     this._renderThumbs();
+    this._updatePhotoActions();
     this._refreshPendingCount();
   }
 
@@ -269,12 +448,41 @@ export default class extends Controller {
     this.thumbsTarget.innerHTML = this.photos
       .map((blob, i) => `
         <div class="capture-thumb">
-          <img src="${URL.createObjectURL(blob)}" alt="">
+          <img src="${URL.createObjectURL(blob)}" alt="Captured photo ${i + 1}" data-photo-index="${i}">
           <button type="button" data-action="capture#removePhoto" data-index="${i}">✕</button>
         </div>
       `)
       .join('');
+    this.thumbsTarget.querySelectorAll('img[data-photo-index]').forEach((image) => {
+      image.addEventListener('click', () => this.openPhotoBrowser(Number(image.dataset.photoIndex)));
+    });
+    if (this.photos.length > 0) {
+      this.thumbsTarget.append(this.addMoreTemplateTarget.content.cloneNode(true));
+    }
     this.submitBtnTarget.disabled = this.photos.length === 0;
+  }
+
+  openPhotoBrowser(index) {
+    if (!window.app?.photoBrowser || this.photos.length === 0) return;
+
+    const photoBrowser = window.app.photoBrowser.create({
+      photos: this.photos.map((photo) => URL.createObjectURL(photo)),
+      type: 'standalone',
+      theme: 'dark',
+    });
+    photoBrowser.open(index);
+    photoBrowser.once('closed', () => photoBrowser.destroy());
+  }
+
+  _updateCaptureCount() {
+    if (this.captureCountElement) {
+      this.captureCountElement.textContent = `${this.photos.length} Photo${this.photos.length === 1 ? '' : 's'}`;
+    }
+  }
+
+  _updatePhotoActions() {
+    if (this.hasPhotoActionsTarget) this.photoActionsTarget.classList.toggle('display-none', this.photos.length > 0);
+    if (this.hasPhotoTitleTarget) this.photoTitleTarget.textContent = this.photos.length > 0 ? 'Photos' : 'Take Photos';
   }
 
   async _refreshPendingCount() {

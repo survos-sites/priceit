@@ -13,7 +13,7 @@ export default class extends Controller {
             // Symfony pages with F7 as PWA chrome only, so every link must go through a real
             // browser navigation instead.
             clicks: {
-                externalLinks: 'a',
+                externalLinks: 'a[href]:not([href^="#"]):not([href^="javascript:"])',
             },
         });
     }

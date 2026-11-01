@@ -1,83 +1,167 @@
 {% extends 'base.html.twig' %}
 
-{% block navbar_title %}Capture item{% endblock %}
+{% block title %}Capture — PriceIt{% endblock %}
+{% block navbar_title %}Capture Item{% endblock %}
 
 {% block body %}
     <div class="block" {{ stimulus_controller('capture') }}>
-        <div class="capture-video-wrap">
-            <video {{ stimulus_target('capture', 'video') }} autoplay playsinline muted></video>
-        </div>
-
-        <div class="grid grid-cols-2" style="margin-top: 12px;">
-            <button type="button" class="button button-fill button-large" data-action="capture#snap">
-                📷 Snap photo
-            </button>
+        <div {{ stimulus_target('capture', 'photoTitle') }} class="block-title block-title-medium no-margin-horizontal">Take Photos</div>
+        <div {{ stimulus_target('capture', 'photoActions') }} class="grid grid-cols-2 grid-gap">
+            <a href="#" class="button button-fill button-large capture-action-button" data-action="capture#openCamera">
+                <twig:ux:icon name="solar:camera-outline" />
+                <span>Snap Photo</span>
+            </a>
             {# The native picker, not the in-page camera. getUserMedia gives a fixed
                crop that suits a barcode more than a thing someone will buy; this
                opens the phone's own camera app (or its library) and hands back a
                properly framed image. capture="environment" is deliberately absent:
                without it iOS and Android offer BOTH "take photo" and "choose from
                library", which is the point. #}
-            <button type="button" class="button button-outline button-large"
+            <button type="button" class="button button-large button-tonal capture-action-button"
                     data-action="capture#pickFiles">
-                🖼️ Upload photos
-            </button>
-            {# Hidden unless the browser can dictate AND there is a connection to
-               dictate through — Chrome sends the audio away to recognise it. #}
-            <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio" hidden>
-                🎙️ Say something about it
+                <twig:ux:icon name="solar:gallery-outline" />
+                <span>Upload Photo</span>
             </button>
         </div>
+        <button type="button" class="button button-outline button-large" style="width:100%; margin-top:12px;"
+                data-action="capture#openNativeCamera">
+            <span>Open Native Camera</span>
+        </button>
+
+        <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
+        <template {{ stimulus_target('capture', 'addMoreTemplate') }}>
+            <a href="#" class="capture-thumb capture-add-more actions-open" data-actions=".capture-actions">
+                <twig:ux:icon name="solar:gallery-add-outline" />
+                <span>Add More Photos</span>
+            </a>
+        </template>
+
+        <div class="actions-modal capture-actions">
+            <div class="actions-group">
+                <a href="#" class="actions-button capture-action-snap"><twig:ux:icon name="solar:camera-outline" /> Snap Photo</a>
+                <a href="#" class="actions-button capture-action-upload"><twig:ux:icon name="solar:gallery-outline" /> Upload Photo</a>
+            </div>
+            <div class="actions-group">
+                <a href="#" class="actions-button actions-close color-red">Cancel</a>
+            </div>
+        </div>
+
+        <section {{ stimulus_target('capture', 'cameraOverlay') }} class="capture-camera-overlay" hidden>
+            <div class="capture-camera-header">
+                <div class="capture-camera-topbar">
+                    <strong>Camera</strong>
+                    <button type="button" class="capture-camera-done" data-action="capture#closeCamera">Done</button>
+                </div>
+            </div>
+            <div {{ stimulus_target('capture', 'videoFrame') }} class="capture-video-wrap capture-ratio-full">
+                <video {{ stimulus_target('capture', 'video') }} autoplay playsinline muted></video>
+            </div>
+            <div class="capture-camera-controls">
+                <span {{ stimulus_target('capture', 'captureCount') }}>0 Photos</span>
+                <div class="capture-camera-bottom-row">
+                    <div class="capture-camera-control-group">
+                        <button type="button" class="capture-camera-control" {{ stimulus_target('capture', 'flashControl') }} data-action="capture#toggleFlash" hidden>
+                            <span class="capture-camera-control-value">
+                                <span {{ stimulus_target('capture', 'flashOffIcon') }}>{{ ux_icon('solar:flashlight-outline', {width: 20, height: 20}) }}</span>
+                                <span {{ stimulus_target('capture', 'flashOnIcon') }} hidden>{{ ux_icon('solar:flashlight-on-outline', {width: 20, height: 20}) }}</span>
+                                <span {{ stimulus_target('capture', 'flashLabel') }}>Off</span>
+                            </span>
+                            <span class="capture-camera-control-label">Flash</span>
+                        </button>
+                        <button type="button" class="capture-camera-control" data-action="capture#cycleAspectRatio">
+                            <span class="capture-camera-control-value">
+                                {{ ux_icon('solar:maximize-square-outline', {width: 20, height: 20}) }}
+                                <span {{ stimulus_target('capture', 'ratioLabel') }}>Full</span>
+                            </span>
+                            <span class="capture-camera-control-label">Ratio</span>
+                        </button>
+                    </div>
+                    <button type="button" class="capture-shutter" data-action="capture#snap" aria-label="Take photo"></button>
+                    <div class="capture-camera-control-group capture-camera-control-group-right">
+                        <button type="button" class="capture-camera-control" {{ stimulus_target('capture', 'cameraSwitch') }} data-action="capture#switchCamera" hidden>
+                            <span class="capture-camera-control-value">
+                                {{ ux_icon('solar:camera-rotate-outline', {width: 20, height: 20}) }}
+                                <span {{ stimulus_target('capture', 'cameraSwitchLabel') }}>Rear</span>
+                            </span>
+                            <span class="capture-camera-control-label">Camera</span>
+                        </button>
+                    </div>
+                </div>
+                <p>Take one or more photos, and tap Done when finished.</p>
+            </div>
+        </section>
+
         <input type="file" accept="image/*" multiple hidden
                {{ stimulus_target('capture', 'fileInput') }}
                data-action="capture#addFiles">
-
-        <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
+        <input type="file" accept="image/*" capture="environment" hidden
+               {{ stimulus_target('capture', 'nativeFileInput') }}
+               data-action="capture#addFiles">
 
         {# One field, whether the words were typed or spoken. Dictation writes
            here, so there is never a second place the note could be hiding. #}
+        <div class="block-title block-title-medium no-margin-horizontal">Describe Item (Optional)</div>
         <textarea {{ stimulus_target('capture', 'note') }}
-                  class="capture-note" rows="2"
-                  placeholder="{{ profiles|first.notePlaceholder() }}"
-                  data-action="capture#noteChanged"></textarea>
+                                      class="resizable capture-note margin-vertical no-margin-horizontal width-100"
+                                      rows="2"
+                                      placeholder="{{ profiles|first.notePlaceholder() }}"
+                                      data-action="capture#noteChanged"></textarea>
 
-        {# Optional. A volunteer who knows what something should go for types it here,
-           and the AI only describes the item. Blank means the AI prices it. Entered
-           at capture because changing a price afterwards means signing in to the admin
-           screen, which nobody at the table has time for. #}
-        <label class="capture-profile">
-            <span>Price</span>
-            <input type="number" inputmode="decimal" min="0" step="0.5"
-                   class="capture-profile-select" placeholder="Leave blank for AI"
-                   {{ stimulus_target('capture', 'price') }}>
-        </label>
+        {# Hidden unless the browser can dictate AND there is a connection to
+           dictate through — Chrome sends the audio away to recognise it. #}
+        <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
+        <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio" hidden>
+            🎙️ Say something about it
+        </button>
 
-        {# Decides what the AI is asked for, what the label carries, and where the item
-           goes afterwards. Auction is the default so nothing about the garage-sale flow
-           changes for anyone who ignores this. #}
-        <label class="capture-profile">
-            <span>What is this?</span>
-            <select {{ stimulus_target('capture', 'profile') }} class="capture-profile-select"
-                    data-action="capture#profileChanged">
-                {% for profile in profiles %}
-                    <option value="{{ profile.value }}"
-                            data-note-placeholder="{{ profile.notePlaceholder() }}">{{ profile.label() }}</option>
-                {% endfor %}
-            </select>
-        </label>
+        <div class="list no-hairlines-md">
+            <ul>
+                {# Optional. A volunteer can provide a price; blank means the AI prices it. #}
+                <li class="item-content item-input no-margin-horizontal">
+                    <div class="item-inner">
+                        <div class="item-title item-label">Price</div>
+                        <div class="item-input-wrap">
+                            <input type="number" inputmode="decimal" min="0" step="0.5"
+                                   placeholder="Optional — AI will suggest a price"
+                                   {{ stimulus_target('capture', 'price') }}>
+                        </div>
+                    </div>
+                </li>
 
-        <label class="capture-print">
-            {# Default ON again, for the fundraiser: the thinkpad's Zebra is up, and the
-               volunteer is standing at the printer holding the item. It was off because
-               depot->isConfigured() only proves DEPOT_BASE_URL is set, not that a Zebra is
-               plugged in, and printing with nothing attached advances the item toward a
-               label that never comes out. The choice is remembered per device, so a phone
-               away from the printer can untick it once. #}
-            <input type="checkbox" checked {{ stimulus_target('capture', 'printToggle') }} data-action="change->capture#printChanged">
-            <span>Print the label as soon as it is described</span>
-        </label>
+                {# Decides what the AI is asked for, what the label carries, and where the item goes. #}
+                <li class="item-content item-input no-margin-horizontal">
+                    <div class="item-inner">
+                        <div class="item-title item-label">What is this?</div>
+                        <div class="item-input-wrap input-dropdown-wrap">
+                            <select {{ stimulus_target('capture', 'profile') }}
+                                    data-action="capture#profileChanged">
+                                {% for profile in profiles %}
+                                    <option value="{{ profile.value }}"
+                                            data-note-placeholder="{{ profile.notePlaceholder() }}">{{ profile.label() }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
 
-        <div {{ stimulus_target('capture', 'thumbs') }} class="capture-thumbs"></div>
+        <div class="list list-strong inset no-margin-horizontal">
+            <ul>
+                <li class="item-content">
+                    <div class="item-inner">
+                        <div class="item-title" style="white-space: normal;">Print the label as soon as it is described</div>
+                        <div class="item-after">
+                            <label class="toggle toggle-init">
+                                {# Default ON; the choice is remembered per device. #}
+                                <input type="checkbox" checked {{ stimulus_target('capture', 'printToggle') }} data-action="change->capture#printChanged">
+                                <span class="toggle-icon"></span>
+                            </label>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
 
         <button type="button" {{ stimulus_target('capture', 'submitBtn') }} class="button button-fill button-large color-green" style="margin-top: 12px;" disabled data-action="capture#submit">
             Save item

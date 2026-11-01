@@ -3,27 +3,105 @@
 {% block title %}{{ item.title ?? 'Item #' ~ item.id }} — PriceIt{% endblock %}
 {% block navbar_title %}{{ item.title ?? 'Item #' ~ item.id }}{% endblock %}
 
+{% block stylesheets %}
+    <style>
+        .item-gallery {
+            background: var(--f7-page-bg-color);
+        }
+        .item-gallery .swiper-slide {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: min(58vh, 480px);
+            background: #111;
+        }
+        .item-gallery-image {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .item-gallery .swiper-button-prev,
+        .item-gallery .swiper-button-next {
+            height: 32px;
+            color: #fff;
+            background: rgb(0 0 0 / 45%);
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if item.photos|length %}
+        {% set photoUrls = [] %}
+        {% for photo in item.photos %}
+            {% set photoUrls = photoUrls|merge([vich_uploader_asset(photo, 'file')]) %}
+        {% endfor %}
+        <script>
+            window.addEventListener('load', function () {
+                const photoBrowser = window.app?.photoBrowser.create({
+                    photos: {{ photoUrls|json_encode|raw }},
+                    type: 'standalone',
+                    theme: 'dark',
+                });
+
+                const gallery = document.querySelector('.item-gallery.swiper');
+                if (gallery && window.app?.swiper) {
+                    window.app.swiper.create(gallery, {
+                        pagination: {
+                            el: gallery.querySelector('.swiper-pagination'),
+                        },
+                        navigation: {
+                            nextEl: gallery.querySelector('.swiper-button-next'),
+                            prevEl: gallery.querySelector('.swiper-button-prev'),
+                        },
+                        keyboard: {
+                            enabled: true,
+                        },
+                    });
+                }
+
+                document.querySelectorAll('.item-gallery-open').forEach(function (link) {
+                    link.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        photoBrowser?.open(Number(link.dataset.photoIndex));
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %}
+
 {% block body %}
     {% set photos = item.photos %}
 
     {% if photos|length %}
         {# Full-bleed and swipeable. On a phone the photo IS the item -- shrinking it into a
            thumbnail grid to fit more metadata gets the priority backwards while reviewing. #}
-        <div class="swiper swiper-init" data-pagination='{"el": ".swiper-pagination"}'>
-            <div class="swiper-pagination"></div>
+        <div class="swiper item-gallery">
+            <div class="swiper-pagination color-white"></div>
             <div class="swiper-wrapper">
                 {% for photo in photos %}
-                    <div class="swiper-slide">
+                    <a href="#" class="swiper-slide item-gallery-open" data-photo-index="{{ loop.index0 }}">
                         <img src="{{ vich_uploader_asset(photo, 'file') }}"
-                             style="width:100%; display:block;" alt="">
-                    </div>
+                             class="item-gallery-image"
+                             alt="{{ item.title ?? 'Item #' ~ item.id }} photo {{ loop.index }}">
+                    </a>
                 {% endfor %}
             </div>
+            {% if photos|length > 1 %}
+                <div class="swiper-button-prev" aria-label="Previous photo"></div>
+                <div class="swiper-button-next" aria-label="Next photo"></div>
+            {% endif %}
         </div>
     {% endif %}
 
+    <div class="block">
+        <div class="block-title-large">{{ item.title ?? 'Untitled item #' ~ item.id }}</div>
+    </div>
+
     <div class="block-title">Details</div>
-    <div class="list simple-list">
+    <div class="list simple-list list-outline list-dividers inset">
         <ul>
             {% if item.profile.wantsPrice() %}
                 <li>
@@ -32,7 +110,10 @@
                 </li>
             {% endif %}
             <li><span>Profile</span><span>{{ item.profile.label() }}</span></li>
-            <li><span>State</span><span>{{ item.marking }}</span></li>
+            {% if item.category or item.equipmentType %}
+                <li><span>Category</span><span>{{ item.category ?? item.equipmentType }}</span></li>
+            {% endif %}
+            <li><span>State</span><span class="badge color-primary">{{ item.marking }}</span></li>
             {% if item.assetNumber %}
                 <li><span>Asset</span><span style="font-family:monospace;">{{ item.assetNumber }}</span></li>
             {% endif %}
@@ -42,12 +123,12 @@
 
     {% if item.description %}
         <div class="block-title">Description</div>
-        <div class="block block-strong inset">{{ item.description|nl2br }}</div>
+        <div class="block block-strong block-outline inset">{{ item.description|nl2br }}</div>
     {% endif %}
 
     {% if item.transcript %}
         <div class="block-title">Voice note</div>
-        <div class="block block-strong inset" style="opacity:.8;">{{ item.transcript|nl2br }}</div>
+        <div class="block block-strong block-outline inset">{{ item.transcript|nl2br }}</div>
     {% endif %}
 
     {# Read-only on purpose. Editing price, printing a label and listing on a marketplace all
@@ -55,7 +136,7 @@
        out of the app mid-task. Reviewing is what this screen is for; the link is honest about
        where the rest still lives. #}
     <div class="block">
-        <a href="{{ path('admin_item_show', {id: item.id}) }}" class="button button-outline">
+        <a href="{{ path('admin_item_show', {id: item.id}) }}" class="button button-fill">
             Edit, print or list (admin)
         </a>
     </div>
