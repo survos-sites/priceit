@@ -1,7 +1,10 @@
-# Scanfony direction: inventory first
+# InventoryIt / Scanfony direction: inventory first
 
-Status: **Current design proposal**, 2026-11-01. Documentation only; the proposed
-experience and acceptance criteria below are not implemented by this change.
+Status: **Current design with an initial implementation**, 2026-11-01.
+InventoryIt is the product name; the repository stays PriceIt. The first slice
+reuses capture and medical identification, adds mobile review, and explicitly saves
+to a shared collection. See the [README](../README.md) for setup and tested boundaries.
+The broader acceptance criteria below remain targets, not a claim of full delivery.
 This supersedes patch-finder-first delivery and the universal MCP camera-app plan.
 
 ## Decision
@@ -186,7 +189,12 @@ is no longer first in delivery order or the AI hackathon centerpiece. Readable n
 and numbers may be sufficient without generative AI. Verify the catalog and the
 user-reported tiny-ocr package before implementation; SQLite-WASM lookup is optional.
 
-This change creates no app implementation, new dependency or deployment.
+The initial implementation uses the existing dependencies and workflow, with a
+collection migration and separate AI suggestion snapshot. It has no deployment
+step. It uses a shared signed-in workspace, not the per-organization permissions
+or protected-media boundary proposed below. Recordings are saved; browser dictation
+or user-entered text supplies the notes used by identification. Server transcription,
+matching and follow-up acquisition are not implemented in this slice.
 
 ## Access and evidence handling
 

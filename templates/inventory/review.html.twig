@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ item.inventorySavedAt ? item.title : 'Review item' }} · InventoryIt{% endblock %}
+{% block navbar_title %}InventoryIt · {{ item.inventorySavedAt ? 'Saved item' : 'Review' }}{% endblock %}
+{% block body %}
+<div class="block inventory-record">
+    <p><a class="external" href="{{ path('inventory_index') }}">← Collections</a></p>
+    {% for photo in item.photos %}
+        <img src="{{ photo.sourceUrl ?: vich_uploader_asset(photo, 'file') }}" alt="Item photo {{ loop.index }}" style="width:100%;max-height:320px;object-fit:contain;border-radius:12px;margin-bottom:8px">
+    {% endfor %}
+    {% for audio in item.audioNotes %}
+        <p>Voice note {{ loop.index }}<br><audio controls preload="none" src="{{ vich_uploader_asset(audio, 'file') }}" style="max-width:100%"></audio></p>
+    {% endfor %}
+    {% if item.transcript %}<details><summary>Captured notes</summary><p style="white-space:pre-wrap">{{ item.transcript }}</p></details>{% endif %}
+
+    {% if item.inventorySavedAt %}
+        <h2>{{ item.title }}</h2>
+        <p>Saved to <strong>{{ item.inventoryCollection.name }}</strong> · {{ item.assetNumber }}</p>
+        <p style="white-space:pre-wrap">{{ item.description }}</p>
+        <p>{{ item.equipmentType }}{% if item.storageLocation %} · {{ item.storageLocation }}{% endif %}</p>
+        <p>Readiness to lend: not assessed by this app.</p>
+        <a href="{{ path('inventory_capture') }}" class="button button-fill button-large external">Add another item</a>
+    {% else %}
+        {% if pending %}
+            <div {{ stimulus_controller('inventory-review', {url: path('inventory_status', {id:item.id})}) }}>
+                <h2>Identifying this item…</h2>
+                <p data-inventory-review-target="status" role="status">Photos and notes are uploaded. You can return to this draft from Collections.</p>
+            </div>
+        {% elseif item.marking == 'failed' %}
+            <p>Identification could not finish. Your evidence is kept. Retry or complete the record yourself.</p>
+            <form method="post" action="{{ path('inventory_retry', {id:item.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('inventory_' ~ item.id) }}">
+                <button class="button button-outline" type="submit">Retry identification</button>
+            </form>
+        {% else %}
+            <h2>Review the suggested record</h2>
+            <p>Check the photos and notes, and correct anything uncertain. A suggested description does not establish readiness to lend.</p>
+        {% endif %}
+        {% set suggestion = item.inventorySuggestion ?? {} %}
+        {% if suggestion.confidence is defined %}<p>AI confidence: {{ suggestion.confidence }}</p>{% endif %}
+        <form method="post" action="{{ path('inventory_save', {id:item.id}) }}" class="inventory-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('inventory_' ~ item.id) }}">
+            {% if pending %}<p>You can also fill in the record now; a later suggestion will not overwrite your saved values.</p>{% endif %}
+            <label>Name<input name="title" required maxlength="255" value="{{ suggestion.title ?? item.title }}" placeholder="For example, adjustable crutches"></label>
+            <label>Equipment type<input name="equipmentType" maxlength="150" value="{{ suggestion.equipmentType ?? item.equipmentType }}"></label>
+            <label>Description<textarea name="description" rows="5" maxlength="12000">{{ suggestion.description ?? item.description }}</textarea></label>
+            <label>Storage location<input name="location" maxlength="255" value="{{ item.storageLocation }}" placeholder="For example, shelf B"></label>
+            <label>Collection<select name="collection">
+                <option value="medical">Medical loan closet</option>
+                {% for collection in collections %}{% if collection.name != 'Medical loan closet' %}<option value="{{ collection.id }}">{{ collection.name }}</option>{% endif %}{% endfor %}
+            </select></label>
+            <button class="button button-fill button-large" type="submit">Save to collection</button>
+        </form>
+    {% endif %}
+</div>
+<style>.inventory-form label { display:block; margin:16px 0; font-weight:600; }.inventory-form input,.inventory-form textarea,.inventory-form select { display:block;box-sizing:border-box;width:100%;font:inherit;font-weight:400;padding:12px;border:1px solid #aaa;border-radius:8px;background:var(--f7-page-bg-color,#fff);color:inherit; }.inventory-record { max-width:680px;margin-left:auto;margin-right:auto;padding-bottom:36px; }</style>
+{% endblock %}

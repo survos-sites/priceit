@@ -4,14 +4,14 @@ pwa:
     manifest:
         enabled: true
         public_url: '/pwa/site.webmanifest'
-        name: 'PriceIt'
-        short_name: 'PriceIt'
-        description: 'Snap photos, speak a note, get an AI price suggestion for garage-sale items.'
+        name: 'InventoryIt'
+        short_name: 'InventoryIt'
+        description: 'Photograph an item, add notes, review and save to your inventory.'
         theme_color: '#E67E22'
         background_color: '#111318'
         display: 'standalone'
         scope: '/'
-        start_url: '/lookup'  # the quick lookup: public, so the installed app opens without a login
+        start_url: '/inventory'  # authenticated shared staff inventory
         categories:
             - 'utilities'
         icons:

@@ -31,9 +31,9 @@ final class LandingController extends AbstractController
     #[Route('/', name: 'app_landing')]
     public function index(Request $request): Response
     {
-        $captureUrl = $this->generateUrl('item_capture');
+        $captureUrl = $this->generateUrl('inventory_capture');
         // Same page, but asks the profiler to keep its toolbar out of the mockup.
-        $embeddedUrl = $this->generateUrl('item_capture', ['embedded' => 1]);
+        $embeddedUrl = $this->generateUrl('inventory_capture', ['embedded' => 1]);
 
         // Fall back to this host so the page is still usable (and the QR still
         // scannable from the same machine) before the tunnel is configured.
@@ -45,10 +45,10 @@ final class LandingController extends AbstractController
             'captureUrl' => $captureUrl,
             'embeddedUrl' => $embeddedUrl,
             // The QR is what a pricer scans at the table, so it opens the quick lookup.
-            'phoneUrl' => $base.$this->generateUrl('app_lookup'),
+            'phoneUrl' => $base.$this->generateUrl('inventory_index'),
             'adminUrl' => $this->generateUrl('admin_item_index'),
             'tunnelConfigured' => $this->publicUrl !== '',
-            'absoluteCaptureUrl' => $this->generateUrl('item_capture', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'absoluteCaptureUrl' => $this->generateUrl('inventory_capture', [], UrlGeneratorInterface::ABSOLUTE_URL),
         ]);
     }
 }

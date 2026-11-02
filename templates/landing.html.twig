@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>PriceIt — price a garage sale from your phone</title>
+    <title>InventoryIt — photograph, review, save</title>
     {{ importmap('admin') }}
     <style>
 
@@ -50,11 +50,11 @@
     <div class="row justify-content-between align-items-start g-5">
 
         <div class="col-lg-6 order-2 order-lg-1">
-            <h1 class="mb-3">PriceIt</h1>
+            <h1 class="mb-3">InventoryIt</h1>
             <p class="lead text-secondary">
-                A garage sale is an inventory problem. Walk around with your phone, photograph
-                each item, say a few words about it, and let the rest happen on its own —
-                a title, a description with some charm, and a price.
+                Photograph the label and the item, add voice notes, and review an AI-suggested
+                inventory record. Save what you have to a collection, starting with the
+                medical loan closet.
             </p>
 
             <div class="card mt-4">
@@ -69,16 +69,16 @@
                         <li class="d-flex gap-3 mb-3 step">
                             <span class="step-num">2</span>
                             <span>It queues on the phone and uploads in the background —
-                                the whole thing works with no signal and catches up later.</span>
+                                queued captures can be retried when your connection returns.</span>
                         </li>
                         <li class="d-flex gap-3 mb-3 step">
                             <span class="step-num">3</span>
-                            <span>AI reads the photos and proposes a title, a description
-                                and a garage-sale price.</span>
+                            <span>AI reads the photos and note text to suggest an inventory record.
+                                Check and correct the details.</span>
                         </li>
                         <li class="d-flex gap-3 step">
                             <span class="step-num">4</span>
-                            <span>Approve it and a price tag comes out of the Zebra, QR and all.</span>
+                            <span>Save it to the Medical loan closet collection and find it again later.</span>
                         </li>
                     </ul>
                 </div>
@@ -91,7 +91,7 @@
                             <h3 class="h4">Offline first</h3>
                             <p class="text-secondary mb-0">
                                 Captures live in an IndexedDB outbox until they're safely
-                                uploaded. A closed tab or a dead connection loses nothing.
+                                uploaded. Submitted captures remain on the device until uploaded.
                             </p>
                         </div>
                     </div>
@@ -99,10 +99,10 @@
                 <div class="col-md-6">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h3 class="h4">Straight to a label</h3>
+                            <h3 class="h4">Save what you have</h3>
                             <p class="text-secondary mb-0">
-                                Depot owns the Zebra. PriceIt hands it the ZPL and is told
-                                whether it printed — no queue to watch.
+                                Keep the record, photos and notes together. Bar, pantry and tool shed
+                                inventories are future uses of the same idea.
                             </p>
                         </div>
                     </div>
@@ -112,7 +112,7 @@
             <div class="mt-4 d-flex gap-2 flex-wrap">
                 <a href="{{ path('app_install') }}" class="btn btn-primary">Install on your phone</a>
                 <a href="{{ captureUrl }}" class="btn btn-outline-primary">Open the capture app</a>
-                <a href="{{ adminUrl }}" class="btn btn-outline-secondary">Review &amp; price items</a>
+                <a href="{{ adminUrl }}" class="btn btn-outline-secondary">PriceIt admin</a>
             </div>
         </div>
 
@@ -121,13 +121,13 @@
                 {# Same-origin on purpose: the frame shows this machine's app, so it
                    works whether or not the tunnel is up. The QR is what carries the
                    public URL. #}
-                <iframe src="{{ embeddedUrl }}" loading="lazy" title="PriceIt capture app"></iframe>
+                <iframe src="{{ embeddedUrl }}" loading="lazy" title="InventoryIt capture app"></iframe>
             </div>
 
             <div class="text-center mt-3">
                 <figure class="figure mb-2">
                     <a href="{{ phoneUrl }}" target="_blank" rel="noopener">
-                        <img class="figure-img img-fluid qr" src="{{ qr_code_url(phoneUrl) }}" alt="Scan to open PriceIt on your phone">
+                        <img class="figure-img img-fluid qr" src="{{ qr_code_url(phoneUrl) }}" alt="Scan to open InventoryIt on your phone">
                     </a>
                 </figure>
                 <p class="text-secondary small mb-1">Scan it — the camera flow wants a real phone.</p>

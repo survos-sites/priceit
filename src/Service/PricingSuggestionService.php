@@ -228,6 +228,14 @@ final class PricingSuggestionService
         }
         $data = $answer['data'];
 
+        if ($item->isInventoryIntake()) {
+            // Never overwrite a reviewed record, even if a delayed worker finishes after save.
+            $item->setInventorySuggestion($data);
+            $this->em->flush();
+
+            return ['ok' => true, 'message' => 'Inventory suggestion ready for review.'];
+        }
+
         $item->setTitle($data['title'] ?? null);
         $item->setDescription($data['description'] ?? null);
         $item->setCategory($data['category'] ?? null);

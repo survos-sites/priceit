@@ -33,4 +33,5 @@ when@test:
     flysystem:
         storages:
             media.storage:
-                memory: ~
+                local:
+                    directory: '%kernel.cache_dir%/test-media'

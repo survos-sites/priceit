@@ -1,4 +1,58 @@
-# PriceIt
+# InventoryIt (PriceIt repository)
+
+InventoryIt adds a focused medical loan-closet flow to the existing PriceIt app:
+**capture → identify → review → save to a collection**.
+
+Open `/inventory` after signing in, or `/inventory/capture` to add an item. Use up
+to three photos (label/box, item, detail) and multiple voice notes. The existing
+camera, recording, dictation, IndexedDB queue and medical Symfony AI prompt are
+reused. Uploaded evidence is a durable draft until the user reviews the suggestion
+and explicitly saves it to **Medical loan closet**. Collection membership and an
+asset number persist; repeat saves and upload retries do not duplicate the item.
+
+The mobile review screen allows title, description, equipment type and storage
+location corrections. AI suggestions remain separate from reviewed fields. Failed
+identification can be retried or completed manually. Saving does not print, publish
+to Quickbase, or declare equipment ready to lend. `/lookup`, legacy `/capture`, and
+PriceIt's pricing/admin paths remain available.
+
+### Run the inventory slice
+
+```bash
+php bin/console doctrine:migrations:execute 'DoctrineMigrations\Version20261102020000' --up
+php bin/console messenger:consume item_suggest
+php bin/console pwa:compile
+```
+
+Apply this migration once to an existing installation; it adds a collection table
+and nullable inventory fields without rewriting existing items. The worker uses
+the existing `ANTHROPIC_API_KEY` and `PRICEIT_AI_MODEL` configuration. Until it
+finishes, the review page checks status and also permits manual completion.
+
+Current boundaries:
+
+- Collections are shared by all signed-in users of this installation; there is no
+  per-user or per-organization isolation yet. Do not treat public self-registration
+  as membership approval for a private staff deployment.
+- Recordings are retained and playable. Existing browser dictation supplies note
+  text where supported; otherwise type a summary. Raw audio is **not** transcribed
+  by the server or sent to the image-identification model.
+- Inventory uploads use validated multipart files (up to 12 MB each, three photos,
+  ten recordings), CSRF protection and a separate local outbox. Existing stored-media
+  URL delivery remains unchanged; private media access is still future work.
+- The new flow supports queued upload/retry, not a verified cold-start offline
+  inventory application. Collection/review pages require a connection. Unsubmitted
+  photos and notes stay in memory until “Identify and review” queues them.
+- The default collection is created on first save; collection creation/management,
+  editing saved records in the mobile UI, matching existing items, checkout/return,
+  QR printing and bar/pantry/tool-shed features are later increments.
+
+Validation: `vendor/bin/phpunit` covers evidence upload/retry, review/save/reopen,
+CSRF/authentication, manual fallback and preservation of reviewed values. Run
+`node --test tests/js/capture_queue.test.mjs` for multipart/legacy-outbox compatibility.
+These checks use local fixtures and mocked model responses, not paid AI calls.
+
+## PriceIt foundation
 
 A garage sale is basically an inventory problem. **PriceIt** is a small Symfony app for solving it
 in the most direct way possible: walk around with your phone, snap a photo (or three) of an item,
@@ -21,12 +75,12 @@ It's also a working demo of a few reusable ideas:
 select camera or mic
   → snap one or more photos, optionally record a spoken note
   → hit "Save item" — queued locally, uploads in the background
-  → (planned) AI reads the photo(s) + note and proposes a title, description, and price
+  → AI reads the photo(s) + note and proposes a title, description, and price
   → review/edit the suggestion on the admin side, mark it priced
 ```
 
-No login yet (single-household use case), no external event/schedule dependency — every visit to
-the mobile app just starts a new item.
+Capture, inventory and admin require sign-in. The public `/lookup` route retains quick
+garage-sale identification and pricing. Each capture starts a new item.
 
 ## Architecture
 
@@ -35,7 +89,7 @@ a focused fw-bundle medical loan-closet demo, with multiple photos and voice not
 per item, review, and save to a collection. Museum find/add follows; bar, pantry
 and tool shed illustrate later uses.
 The generic MCP plugin architecture is deferred until a couple of working apps
-reveal what should be shared. This is proposed work, not shipped functionality.
+reveal what should be shared. The core loan-closet capture/review/save slice is implemented above; broader domains remain proposed.
 
 Two front ends, one Symfony backend, one SQLite database:
 

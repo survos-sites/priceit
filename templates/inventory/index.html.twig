@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+{% block title %}Collections · InventoryIt{% endblock %}
+{% block navbar_title %}InventoryIt · Collections{% endblock %}
+{% block body %}
+<div class="block">
+    <p>Your team's inventory, with photos and notes kept together.</p>
+    <a class="button button-fill button-large external" href="{{ path('inventory_capture') }}">Add a loan-closet item</a>
+</div>
+<div class="block-title">Needs review</div>
+<div class="list media-list"><ul>
+{% set drafts = items|filter(item => item.inventoryIntake and not item.inventorySavedAt) %}
+{% for item in drafts %}
+    <li><a href="{{ path('inventory_review', {id:item.id}) }}" class="item-link item-content external"><div class="item-inner">
+        <div class="item-title">{{ item.inventorySuggestion.title ?? item.title ?? ('Item #' ~ item.id) }}</div>
+        <div class="item-subtitle">{{ item.marking == 'new' ? 'Identifying…' : (item.marking == 'failed' ? 'Needs attention' : 'Ready for review') }} · {{ item.photos|length }} photos</div>
+    </div></a></li>
+{% else %}<li class="item-content"><div class="item-inner">No unfinished items.</div></li>{% endfor %}
+</ul></div>
+{% for collection in collections %}
+    <div class="block-title">{{ collection.name }}</div>
+    <div class="list media-list"><ul>
+    {% for item in items|filter(item => item.inventoryCollection and item.inventoryCollection.id == collection.id) %}
+        <li><a href="{{ path('inventory_review', {id:item.id}) }}" class="item-link item-content external"><div class="item-inner">
+            <div class="item-title">{{ item.title }}</div><div class="item-subtitle">{{ item.assetNumber }}{% if item.storageLocation %} · {{ item.storageLocation }}{% endif %}</div>
+        </div></a></li>
+    {% else %}<li class="item-content"><div class="item-inner">No saved items yet.</div></li>{% endfor %}
+    </ul></div>
+{% else %}<div class="block"><h2>Medical loan closet</h2><p>Review your first item and save it here to start the collection.</p></div>{% endfor %}
+{% endblock %}
