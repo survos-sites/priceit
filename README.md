@@ -16,6 +16,13 @@ identification can be retried or completed manually. Saving does not print, publ
 to Quickbase, or declare equipment ready to lend. `/lookup`, legacy `/capture`, and
 PriceIt's pricing/admin paths remain available.
 
+### Development sign-in
+
+With `APP_ENV=dev`, `/login` lists up to five verified users. Click a user to sign
+in without a password and open Collections. Each shortcut is a CSRF-protected POST;
+its route and user list are absent outside development. Normal password sign-in
+and email verification remain unchanged.
+
 ### Run the inventory slice
 
 ```bash
