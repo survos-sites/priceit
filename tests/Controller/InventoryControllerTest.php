@@ -134,6 +134,7 @@ final class InventoryControllerTest extends WebTestCase
     {
         $this->browser->request('GET', '/inventory/capture');
         self::assertResponseIsSuccessful();
+        self::assertPageTitleContains('InventoryIt');
         self::assertSelectorExists('[data-capture-inventory-value="true"]');
         self::assertSelectorExists('[data-capture-target="recordings"]');
         self::assertSelectorNotExists('[data-capture-target="printToggle"]');

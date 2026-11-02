@@ -23,10 +23,6 @@
                         </div>
                     </div>
 
-                    <div class="page-content">
-                        {% block body %}{% endblock %}
-                    </div>
-
                     {% block toolbar %}
                         {# fw-bundle's own tabbar. MOBILE_TAB_MENU_LINKED renders real hrefs with
                            the active tab resolved by KnpMenu's route matcher; App\Menu\TabMenu
@@ -38,6 +34,10 @@
                             </div>
                         </div>
                     {% endblock %}
+
+                    <div class="page-content">
+                        {% block body %}{% endblock %}
+                    </div>
                 </div>
             </div>
         </div>

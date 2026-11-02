@@ -1,18 +1,18 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}Items — PriceIt{% endblock %}
-{% block navbar_title %}Items{% endblock %}
+{% block navbar_title %}My Items{% endblock %}
 
 {% block body %}
     {# A media list, not the admin's table. The same rows on a phone would scroll sideways,
        and the columns that matter while reviewing -- photo, title, price, where it is
        listed -- are the ones a table pushes off the edge first. #}
-    <div class="list media-list links-list">
+    <div class="list media-list list-dividers list-outline list-strong inset margin-vertical">
         <ul>
             {% for item in items %}
                 {% set photos = item.photos %}
                 <li>
-                    <a href="{{ path('app_item_show', {id: item.id}) }}">
+                    <a href="{{ path('app_item_show', {id: item.id}) }}" class="item-link">
                         <div class="item-content">
                             <div class="item-media">
                                 {% if photos|length %}
@@ -22,12 +22,12 @@
                                 {% else %}
                                     {# Still a tile, not nothing: a missing photo should leave the
                                        rows aligned, or the list looks broken rather than incomplete. #}
-                                    <div style="width:56px;height:56px;border-radius:8px;background:var(--f7-list-item-border-color,#e5e5e5);"></div>
+                                    <div style="width:56px;height:56px;border-radius:8px;background:var(--f7-md-surface-5);"></div>
                                 {% endif %}
                             </div>
                             <div class="item-inner">
                                 <div class="item-title-row">
-                                    <div class="item-title">{{ item.title ?? 'Untitled item #' ~ item.id }}</div>
+                                    <div class="item-title">{{ (item.title ?? 'Untitled item') ~ ' #' ~ item.id }}</div>
                                     <div class="item-after">
                                         {% if item.profile.wantsPrice() %}
                                             {{ item.price is not null ? '$' ~ item.price : '—' }}
@@ -35,6 +35,7 @@
                                     </div>
                                 </div>
                                 <div class="item-subtitle" style="font-size:13px;opacity:.7;">
+                                    <span>{{ item.profile.label() }} · </span>
                                     {{ photos|length }} photo{{ photos|length == 1 ? '' : 's' }}{{ item.audio ? ' · audio' : '' }}
                                     {%- if item.assetNumber %} · <span style="font-family:monospace;">{{ item.assetNumber }}</span>{% endif %}
                                 </div>
@@ -46,7 +47,17 @@
                 <li>
                     <div class="item-content">
                         <div class="item-inner">
-                            <div class="item-title">Nothing captured yet</div>
+                            <div class="block text-align-center empty-state">
+                                {{ ux_icon('solar:album-outline', {class: 'empty-state-icon', width: 56, height: 56, 'aria-hidden': 'true'}) }}
+                                <div class="empty-state-title">Nothing captured yet</div>
+                                <div class="empty-state-text">
+                                    Start by capturing an item. Your captured items will appear here with their photos, details, and prices — all in one place.
+                                </div>
+                                <a href="{{ path('item_capture') }}" class="button button-fill">
+                                    {{ ux_icon('solar:camera-outline', {'aria-hidden': 'true'}) }}
+                                    Capture your first item
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </li>
@@ -54,9 +65,4 @@
         </ul>
     </div>
 
-    {% if items is empty %}
-        <div class="block">
-            <a href="{{ path('item_capture') }}" class="button button-fill button-large">Capture the first item</a>
-        </div>
-    {% endif %}
 {% endblock %}
