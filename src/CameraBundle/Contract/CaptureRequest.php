@@ -31,6 +31,8 @@ final class CaptureRequest
          * @var list<string>
          */
         public readonly array $photoUrls = [],
+        /** @var list<UploadedFile> */
+        public readonly array $audioNotes = [],
     ) {
     }
 }

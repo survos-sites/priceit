@@ -1,10 +1,15 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Capture — PriceIt{% endblock %}
-{% block navbar_title %}Capture Item{% endblock %}
+{% block title %}{{ inventory|default(false) ? 'Add item · InventoryIt' : 'Capture item · PriceIt' }}{% endblock %}
+{% block navbar_title %}{{ inventory|default(false) ? 'InventoryIt · Add item' : 'Capture item' }}{% endblock %}
 
 {% block body %}
-    <div class="block" {{ stimulus_controller('capture') }}>
+    <div class="block" {{ stimulus_controller('capture', inventory|default(false) ? {inventory: true, captureUrl: path('inventory_upload'), csrfToken: csrf_token('inventory_capture')} : {}) }}>
+        {% if inventory|default(false) %}
+            <p>Medical loan closet · One item at a time</p>
+            <p>Photograph the label or box, then the item and a useful detail (up to three photos). Add voice notes, then review before saving.</p>
+            <p><a href="{{ path('inventory_index') }}" class="external">Collections and unfinished items</a></p>
+        {% endif %}
         <div {{ stimulus_target('capture', 'photoTitle') }} class="block-title block-title-medium no-margin-horizontal">Take Photos</div>
         <div {{ stimulus_target('capture', 'photoActions') }} class="grid grid-cols-2 grid-gap">
             <a href="#" class="button button-fill button-large capture-action-button" data-action="capture#openCamera">
@@ -111,9 +116,14 @@
            dictate through — Chrome sends the audio away to recognise it. #}
         <p {{ stimulus_target('capture', 'audioStatus') }} class="text-align-center"></p>
         <button type="button" {{ stimulus_target('capture', 'audioBtn') }} class="button button-outline button-large" data-action="capture#toggleAudio" hidden>
-            🎙️ Say something about it
+            {{ inventory|default(false) ? '🎙️ Add voice note' : '🎙️ Say something about it' }}
         </button>
 
+        {% if inventory|default(false) %}
+            <p>Recordings are kept with the item. Check or type their text above for identification; automatic dictation depends on your browser and connection.</p>
+            <div data-capture-target="recordings"></div>
+            <input type="hidden" value="medical" data-capture-target="profile">
+        {% else %}
         <div class="list no-hairlines-md">
             <ul>
                 {# Optional. A volunteer can provide a price; blank means the AI prices it. #}
@@ -163,10 +173,13 @@
             </ul>
         </div>
 
+        {% endif %}
+
         <button type="button" {{ stimulus_target('capture', 'submitBtn') }} class="button button-fill button-large color-green" style="margin-top: 12px;" disabled data-action="capture#submit">
-            Save item
+            {{ inventory|default(false) ? 'Identify and review' : 'Save item' }}
         </button>
 
+        {% if inventory|default(false) %}<button type="button" class="button" data-action="capture#retryUploads">Retry pending uploads</button>{% endif %}
         <p class="text-align-center" {{ stimulus_target('capture', 'pendingCount') }}></p>
         <p class="text-align-center text-color-red" {{ stimulus_target('capture', 'statusMsg') }}></p>
     </div>

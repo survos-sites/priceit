@@ -57,6 +57,8 @@ security:
         - { path: ^/admin, roles: ROLE_USER }
         - { path: ^/items, roles: ROLE_USER }
         - { path: ^/capture, roles: ROLE_USER }
+        - { path: ^/inventory, roles: ROLE_USER }
+        - { path: ^/api/(items|media|camera), roles: ROLE_USER }
 
 when@test:
     security:

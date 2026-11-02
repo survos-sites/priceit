@@ -11,8 +11,8 @@ import { CaptureQueue } from 'camera-bundle/capture-queue';
  * Targets: video, thumbs, submitBtn, audioBtn, audioStatus, pendingCount, statusMsg
  */
 export default class extends Controller {
-  static targets = ['video', 'videoFrame', 'ratioLabel', 'cameraSwitch', 'cameraSwitchLabel', 'flashControl', 'flashLabel', 'flashOnIcon', 'flashOffIcon', 'thumbs', 'captureCount', 'addMoreTemplate', 'photoActions', 'photoTitle', 'cameraOverlay', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput', 'nativeFileInput', 'price'];
-  static values = { captureUrl: { type: String, default: '/api/camera/capture' } };
+  static targets = ['video', 'videoFrame', 'ratioLabel', 'cameraSwitch', 'cameraSwitchLabel', 'flashControl', 'flashLabel', 'flashOnIcon', 'flashOffIcon', 'thumbs', 'captureCount', 'addMoreTemplate', 'photoActions', 'photoTitle', 'cameraOverlay', 'submitBtn', 'audioBtn', 'audioStatus', 'pendingCount', 'statusMsg', 'note', 'printToggle', 'profile', 'fileInput', 'nativeFileInput', 'price', 'recordings'];
+  static values = { captureUrl: { type: String, default: '/api/camera/capture' }, inventory: Boolean, csrfToken: String };
 
   connect() {
     this.camera = new Camera();
@@ -20,13 +20,14 @@ export default class extends Controller {
     this.speech = new Speech();
     this.transcript = '';
     this.notePrefix = '';
-    this._onConnectivityChange = () => this._updateSpeechAvailability();
+    this._onConnectivityChange = () => { this._updateSpeechAvailability(); if (navigator.onLine) this.queue.retryErrors(); };
     this.photos = [];
     this.aspectRatioIndex = 0;
     this.cameraDeviceId = null;
     this.cameraDevices = [];
     this.flashOn = false;
     this.audioBlob = null;
+    this.audioNotes = [];
     this._updatePhotoActions();
     this.cameraOpen = false;
     this.videoElement = this.videoTarget;
@@ -39,14 +40,21 @@ export default class extends Controller {
     this.actionSnap?.addEventListener('click', this._onActionSnap);
     this.actionUpload?.addEventListener('click', this._onActionUpload);
 
-    this.queue = new CaptureQueue({ endpoint: this.captureUrlValue });
+    this.queue = new CaptureQueue({ endpoint: this.captureUrlValue,
+      ...(this.inventoryValue ? { dbName: 'inventoryit_captures', directUpload: false, csrfToken: this.csrfTokenValue } : {}),
+    });
     this.queue.onProgress = () => this._refreshPendingCount();
-    this.queue.onConfirmed = () => {
+    this.queue.onConfirmed = (capture) => {
+      if (this.inventoryValue && capture.serverResponse.reviewUrl) {
+        window.location.assign(capture.serverResponse.reviewUrl);
+        return;
+      }
       this._setStatus('Saved ✓');
       this._refreshPendingCount();
     };
     this.queue.onError = (item) => this._setStatus(`Upload error (will retry): ${item.error}`);
     this.queue.start();
+    if (this.inventoryValue && navigator.onLine) this.queue.retryErrors();
     this._refreshPendingCount();
 
     // Connectivity can change mid-sale — a phone in a garage drifts on and off
@@ -100,11 +108,13 @@ export default class extends Controller {
     window.removeEventListener('online', this._onConnectivityChange);
     window.removeEventListener('offline', this._onConnectivityChange);
     this.queue.stop();
+    [...(this.photoUrls || []), ...(this.recordingUrls || [])].forEach(url => URL.revokeObjectURL(url));
   }
 
   async snap() {
     try {
       const blob = await this._captureVisibleFrame();
+      if (this.inventoryValue && this.photos.length >= 3) return this._setStatus('Use up to three photos: label, item, detail.');
       this.photos.push(blob);
       this._renderThumbs();
       this._updatePhotoActions();
@@ -297,6 +307,7 @@ export default class extends Controller {
       return;
     }
 
+    if (this.inventoryValue && this.photos.length + chosen.length > 3) return this._setStatus('Choose up to three photos for one item.');
     this.photos.push(...chosen);
     this._renderThumbs();
     this._updatePhotoActions();
@@ -316,6 +327,7 @@ export default class extends Controller {
   }
 
   async toggleAudio() {
+    if (this.inventoryValue) return this._toggleRecording();
     // The button only exists when dictation is usable, so there is no
     // fallback branch here any more: no connection means no button, and the
     // note gets typed. Recording audio nobody transcribes helped no one.
@@ -373,7 +385,7 @@ export default class extends Controller {
       this.noteTarget.classList.remove('is-interim');
     }
     this.audioStatusTarget.textContent = '';
-    this.audioBtnTarget.textContent = '🎙️ Say something about it';
+    this.audioBtnTarget.textContent = this.inventoryValue ? '🎙️ Add voice note' : '🎙️ Say something about it';
   }
 
   /** Dictated words appended to whatever was already typed. */
@@ -391,7 +403,7 @@ export default class extends Controller {
   _updateSpeechAvailability() {
     const usable = Speech.isSupported() && navigator.onLine;
 
-    this.audioBtnTarget.hidden = !usable;
+    this.audioBtnTarget.hidden = this.inventoryValue ? !window.MediaRecorder : !usable;
 
     if (!usable && this.speech.isListening) {
       this.transcript = this.speech.stop();
@@ -408,15 +420,21 @@ export default class extends Controller {
   }
 
   async submit() {
+    if (this.submitting || this.recordingBusy) return;
     if (this.photos.length === 0) {
       this._setStatus('Take at least one photo first');
       return;
     }
 
+    this.submitting = true;
+    if (this.audio.isRecording) await this._toggleRecording();
+    if (this.speech.isListening) this.speech.stop();
+    this.submitBtnTarget.disabled = true;
     try {
       await this.queue.enqueue({
         photos: this.photos,
         audio: this.audioBlob,
+        audioNotes: this.audioNotes,
         metadata: {
           ...(this._note() ? { transcript: this._note() } : {}),
           // Chosen per capture: an auction lot and a loan-closet item are photographed
@@ -430,25 +448,94 @@ export default class extends Controller {
         },
       });
     } catch (err) {
+      this.submitting = false;
+      this.submitBtnTarget.disabled = false;
       this._setStatus(`Could not save locally: ${err.message}`);
       return;
     }
 
     this._setStatus('Queued — uploading in the background');
     this.photos = [];
+    this.audioNotes = [];
+    this._renderRecordings();
     this.clearNote();
     if (this.captureCountElement) this.captureCountElement.textContent = '0 Photos';
     if (this.hasPriceTarget) this.priceTarget.value = '';
     this._renderThumbs();
     this._updatePhotoActions();
     this._refreshPendingCount();
+    this.submitting = false;
+  }
+
+  async retryUploads() {
+    await this.queue.retryErrors();
+  }
+
+  async _toggleRecording() {
+    if (this.recordingBusy) return;
+    this.recordingBusy = true;
+    try {
+      if (this.audio.isRecording) {
+        const blob = await this.audio.stop();
+        if (this.speech.isListening) this.speech.stop();
+        this.audioNotes.push(blob);
+        this._renderRecordings();
+        this.audioBtnTarget.textContent = '🎙️ Add another voice note';
+        this.audioStatusTarget.textContent = 'Recording kept. Check the note text below; only that text is used for identification.';
+      } else {
+        if (this.audioNotes.length >= 10) return this._setStatus('Use up to ten voice notes per item.');
+        await this.audio.start();
+        this.audioBtnTarget.textContent = '⏹️ Finish voice note';
+        this.audioStatusTarget.textContent = 'Recording…';
+        if (Speech.isSupported() && navigator.onLine) {
+          this.notePrefix = this._note();
+          this.speech.reset();
+          this.speech.onUpdate = text => { this.noteTarget.value = this._composeNote(text); };
+          this.speech.onError = () => { this.audioStatusTarget.textContent = 'Recording continues. Type a summary below if dictation is unavailable.'; };
+          try { this.speech.start(); } catch { /* Recording is retained even without dictation. */ }
+        }
+      }
+    } catch (err) {
+      this._setStatus(`Voice note: ${err.message}`);
+    } finally {
+      this.recordingBusy = false;
+    }
+  }
+
+  removeRecording(event) {
+    this.audioNotes.splice(Number(event.currentTarget.dataset.index), 1);
+    this._renderRecordings();
+    this._setStatus('Recording removed. Edit its text below if needed.');
+  }
+
+  _renderRecordings() {
+    if (!this.hasRecordingsTarget) return;
+    (this.recordingUrls || []).forEach(url => URL.revokeObjectURL(url));
+    this.recordingUrls = this.audioNotes.map(blob => URL.createObjectURL(blob));
+    this.recordingsTarget.replaceChildren();
+    this.recordingUrls.forEach((url, i) => {
+      const row = document.createElement('div');
+      const player = document.createElement('audio');
+      player.controls = true;
+      player.src = url;
+      player.setAttribute('aria-label', `Voice note ${i + 1}`);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = `Remove note ${i + 1}`;
+      remove.dataset.action = 'capture#removeRecording';
+      remove.dataset.index = i;
+      row.append(player, remove);
+      this.recordingsTarget.append(row);
+    });
   }
 
   _renderThumbs() {
+    (this.photoUrls || []).forEach(url => URL.revokeObjectURL(url));
+    this.photoUrls = this.photos.map(blob => URL.createObjectURL(blob));
     this.thumbsTarget.innerHTML = this.photos
       .map((blob, i) => `
         <div class="capture-thumb">
-          <img src="${URL.createObjectURL(blob)}" alt="Captured photo ${i + 1}" data-photo-index="${i}">
+          <img src="${this.photoUrls[i]}" alt="Captured photo ${i + 1}" data-photo-index="${i}">
           <button type="button" data-action="capture#removePhoto" data-index="${i}">✕</button>
         </div>
       `)

@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Sign in — PriceIt{% endblock %}
+{% block title %}Sign in — InventoryIt{% endblock %}
 {% block navbar_title %}Sign in{% endblock %}
 
 {% block body %}
@@ -24,6 +24,21 @@
         <div class="block block-strong inset">
             Signed in as {{ app.user.userIdentifier }} —
             <a href="{{ logout_path() }}">log out</a>
+        </div>
+    {% endif %}
+
+    {% if app.environment == 'dev' %}
+        <div class="block block-strong inset dev-user-picker">
+            <h2>Quick sign in</h2>
+            <p>Development only — choose a user. No password needed.</p>
+            {% for user in dev_users %}
+                <form method="post" action="{{ path('app_dev_login', {id: user.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('dev_login_' ~ user.id) }}">
+                    <button type="submit" class="button button-fill button-large" style="margin-bottom:8px">{{ user.email }}</button>
+                </form>
+            {% else %}
+                <p>No verified users yet. Create and verify an account to use quick sign in.</p>
+            {% endfor %}
         </div>
     {% endif %}
 

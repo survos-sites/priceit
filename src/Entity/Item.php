@@ -166,6 +166,47 @@ class Item
     #[Groups(['item:read'])]
     private array $valueEstimates = [];
 
+    #[ORM\ManyToOne]
+    private ?InventoryCollection $inventoryCollection = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $inventorySavedAt = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $storageLocation = null;
+
+    /** The AI draft remains separate from the human-reviewed record. */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $inventorySuggestion = null;
+
+    public function isInventoryIntake(): bool
+    {
+        return ($this->attributes['source'] ?? null) === 'inventory';
+    }
+
+    public function getInventoryCollection(): ?InventoryCollection { return $this->inventoryCollection; }
+    public function getInventorySavedAt(): ?\DateTimeImmutable { return $this->inventorySavedAt; }
+    public function getStorageLocation(): ?string { return $this->storageLocation; }
+    public function setStorageLocation(?string $value): void { $this->storageLocation = $value; }
+    public function getInventorySuggestion(): ?array { return $this->inventorySuggestion; }
+    public function setInventorySuggestion(array $value): void { $this->inventorySuggestion = $value; }
+
+    public function saveToCollection(InventoryCollection $collection): void
+    {
+        if (!$this->isInventoryIntake() || trim($this->title ?? '') === '') {
+            throw new \LogicException('Review an inventory item before saving it.');
+        }
+        $this->inventoryCollection = $collection;
+        $this->inventorySavedAt ??= new \DateTimeImmutable();
+        $this->assignAssetNumber();
+    }
+
+    /** @return list<Media> */
+    public function getAudioNotes(): array
+    {
+        return array_values($this->media->filter(static fn (Media $media): bool => MediaKind::Audio === $media->getKind())->toArray());
+    }
+
     /** @var Collection<int, Media> */
     #[ORM\OneToMany(targetEntity: Media::class, mappedBy: 'item', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['item:read'])]

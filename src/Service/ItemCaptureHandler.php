@@ -45,13 +45,18 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
         // -- the phone is often on a bad connection and the photos matter more.
         $item = new Item($request->clientId, self::profileFrom($request->metadata['profile'] ?? null));
 
+        if (($request->metadata['inventory'] ?? false) === true) {
+            $item->setProfile(CaptureProfile::MedicalEquipment);
+            $item->setAttributes(['source' => 'inventory']);
+        }
+
         // The spoken note arrives as text, not audio: the browser transcribes it
         // and we keep the string. It goes in before the flush so the kickoff
         // dispatched on postFlush hands the model a note it can actually read —
         // "the handle is chipped" is worth more than another angle of the mug.
         // Ticked on the capture screen. Set before the flush, because the
         // kickoff dispatched on postFlush is what eventually reads it.
-        $item->printRequested = (bool) ($request->metadata['print'] ?? false);
+        $item->printRequested = !$item->isInventoryIntake() && (bool) ($request->metadata['print'] ?? false);
 
         // Typed on the capture screen. The AI still writes the title and description, but
         // PricingSuggestionService leaves a price it finds already set alone.
@@ -80,6 +85,10 @@ final class ItemCaptureHandler implements CaptureHandlerInterface
 
         if (null !== $request->audio) {
             $item->addMedia($this->buildMedia(MediaKind::Audio, $request->audio));
+        }
+
+        foreach ($request->audioNotes as $audio) {
+            $item->addMedia($this->buildMedia(MediaKind::Audio, $audio));
         }
 
         $this->em->persist($item);

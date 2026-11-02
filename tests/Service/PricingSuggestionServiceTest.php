@@ -44,6 +44,34 @@ final class PricingSuggestionServiceTest extends TestCase
         self::assertSame('Bowl', $result['data']['title']);
     }
 
+    public function testInventorySuggestionUsesAllEvidenceWithoutOverwritingReviewedFields(): void
+    {
+        $item = new \App\Entity\Item('inventory-1', \App\Profile\CaptureProfile::MedicalEquipment);
+        $item->setAttributes(['source' => 'inventory']);
+        $item->setTitle('Reviewed crutches');
+        $item->setDescription('Staff confirmed');
+        $item->setTranscript('First note: shelf B. Second note: missing rubber tip.');
+        $item->saveToCollection(new \App\Entity\InventoryCollection('Medical loan closet'));
+        foreach (['label.jpg', 'item.jpg', 'detail.jpg'] as $filename) {
+            $item->addMedia((new \App\Entity\Media(\App\Entity\MediaKind::Photo))->setFilename($filename)->setMimeType('image/jpeg'));
+        }
+        $storage = $this->createStub(FilesystemOperator::class);
+        $storage->method('read')->willReturn('photo-bytes');
+        $client = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
+            $body = json_decode($options['body'], true, flags: JSON_THROW_ON_ERROR);
+            self::assertArrayNotHasKey('priceUsd', $body['output_config']['format']['schema']['properties']);
+            self::assertCount(4, $body['messages'][0]['content']);
+            self::assertStringContainsString('missing rubber tip', $body['messages'][0]['content'][3]['text']);
+            return self::response('{"title":"Suggested crutches","description":"AI description","category":"Mobility","equipmentType":"Crutches","confidence":"high"}', 'end_turn');
+        });
+        $service = new PricingSuggestionService($this->createStub(EntityManagerInterface::class), $storage, new NullLogger(), 'test-key', 'claude-opus-5', $client);
+        self::assertTrue($service->suggest($item)['ok']);
+        self::assertSame('Reviewed crutches', $item->getTitle());
+        self::assertSame('Staff confirmed', $item->getDescription());
+        self::assertSame('Suggested crutches', $item->getInventorySuggestion()['title']);
+        self::assertNull($item->getPrice());
+    }
+
     #[DataProvider('failureResponses')]
     public function testFailuresAreReturned(string $text, string $stop, int $status, string $expected): void
     {

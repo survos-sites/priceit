@@ -22,8 +22,8 @@ const DB_NAME = 'camera_bundle_captures';
 const DB_VERSION = 1;
 
 class CaptureDb extends Dexie {
-  constructor() {
-    super(DB_NAME);
+  constructor(name = DB_NAME) {
+    super(name);
     this.version(DB_VERSION).stores({
       captures: '++id, status, capturedAt, clientId',
     });
@@ -36,7 +36,9 @@ export class CaptureQueue {
     this.endpoint = opts.endpoint || '/api/camera/capture';
     this.presignEndpoint = opts.presignEndpoint || '/api/camera/upload-urls';
     this.concurrency = opts.concurrency || 1;
-    this.db = new CaptureDb();
+    this.db = new CaptureDb(opts.dbName);
+    this.csrfToken = opts.csrfToken;
+    this.directUpload = opts.directUpload !== false;
     this._running = false;
     this._inFlight = 0;
 
@@ -53,7 +55,7 @@ export class CaptureQueue {
    * @param {{ photos: Blob[], audio: Blob|null, metadata?: Object }} capture
    * @returns {Promise<number>} Dexie record id
    */
-  async enqueue({ photos, audio, metadata = {} }) {
+  async enqueue({ photos, audio, audioNotes = [], metadata = {} }) {
     const clientId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
     console.log('[capture-queue] enqueue: %d photo(s), audio=%o', photos.length, !!audio);
     let id;
@@ -64,6 +66,7 @@ export class CaptureQueue {
         clientId,
         photos,
         audio: audio || null,
+        audioNotes,
         metadata,
       });
     } catch (err) {
@@ -201,7 +204,7 @@ export class CaptureQueue {
 
     // Straight to S3 when we can. The bytes then never cross the web process,
     // which is the slowest hop from a phone and the one with a body-size limit.
-    const uploaded = photos.length > 0 ? await this._uploadDirect(clientId, photos) : [];
+    const uploaded = this.directUpload ? (photos.length > 0 ? await this._uploadDirect(clientId, photos) : []) : null;
 
     const form = new FormData();
     form.append('client_id', clientId);
@@ -218,12 +221,16 @@ export class CaptureQueue {
       const ext = audio.type === 'audio/webm' ? 'webm' : 'ogg';
       form.append('audio', audio, `note.${ext}`);
     }
+    (capture.audioNotes || []).forEach((blob, i) => {
+      const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      form.append('audio_notes[]', blob, `note-${i}.${ext}`);
+    });
     form.append('metadata', JSON.stringify({
       ...metadata,
       captured_at: new Date(capture.capturedAt).toISOString(),
     }));
 
-    const resp = await fetch(this.endpoint, { method: 'POST', body: form });
+    const resp = await fetch(this.endpoint, { method: 'POST', body: form, headers: this.csrfToken ? { 'X-CSRF-Token': this.csrfToken } : {} });
 
     if (!resp.ok) {
       const text = await resp.text().catch(() => '');

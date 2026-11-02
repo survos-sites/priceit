@@ -29,9 +29,13 @@ final class TabMenu implements KnpMenuHelperInterface
     {
         $menu = $event->getMenu();
 
+        $this->add($menu, route: 'inventory_capture', label: 'InventoryIt', icon: 'tabler:camera');
+        $collections = $this->add($menu, route: 'inventory_index', label: 'Collections', icon: 'tabler:archive', returnItem: true);
+        $collections->setExtra('routes', ['inventory_index', 'inventory_review']);
+
         // First, because it is what most volunteers came for: what is it, what do we charge.
         $this->add($menu, route: 'app_lookup', label: 'Price it', icon: 'tabler:search');
-        $this->add($menu, route: 'item_capture', label: 'Capture', icon: 'tabler:camera');
+
 
         $items = $this->add($menu, route: 'app_item_index', label: 'Items', icon: 'tabler:list', returnItem: true);
 
