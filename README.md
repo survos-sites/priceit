@@ -36,6 +36,16 @@ and nullable inventory fields without rewriting existing items. The worker uses
 the existing `ANTHROPIC_API_KEY` and `PRICEIT_AI_MODEL` configuration. Until it
 finishes, the review page checks status and also permits manual completion.
 
+If a worker reports `Survos\StateBundle\Message\TransitionMessage` missing after
+the workflow-bundle upgrade, those are old serialized jobs, not new captures.
+Inspect historical failed item suggestions with `php bin/console app:queue:archive-legacy`;
+use `--apply` to move only matching, unclaimed failures to `legacy_state_archive`.
+Their bodies, headers and timestamps remain in `messenger_messages`; no items are
+deleted and no AI/printing/export actions are replayed. Unrelated and active jobs
+are left alone. Reassess an old item individually before requesting fresh analysis;
+do not bulk-retry archived messages using the removed class. Run current work with
+`php bin/console messenger:consume item_suggest -vv`, not the failed transport.
+
 Current boundaries:
 
 - Collections are shared by all signed-in users of this installation; there is no
