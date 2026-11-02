@@ -30,8 +30,10 @@ the mobile app just starts a new item.
 
 ## Architecture
 
-For the next apps, see the [Scanfony design direction](docs/scanfony.md): separate
-fw-bundle apps, starting with patch OCR and catalog lookup, then museum find/add.
+For the proposed inventory-first direction, see the [Scanfony design](docs/scanfony.md):
+a focused fw-bundle medical loan-closet demo, with multiple photos and voice notes
+per item, review, and save to a collection. Museum find/add follows; bar, pantry
+and tool shed illustrate later uses.
 The generic MCP plugin architecture is deferred until a couple of working apps
 reveal what should be shared. This is proposed work, not shipped functionality.
 

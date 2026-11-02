@@ -1,8 +1,9 @@
 # Deferred exploration: generic MCP acquisition architecture
 
 Status: **Deferred / superseded for near-term implementation**, 2026-11-01.
-The current direction is [separate fw-bundle apps](scanfony.md): patch OCR and lookup
-first, museum find/add next. This document preserves the earlier platform exploration
+The current direction is [inventory-first fw-bundle apps](scanfony.md): a medical
+loan-closet demo with multiple photos and voice notes per item, review and save to a
+collection first; museum find/add next. This document preserves the earlier platform exploration
 for reference only. Its one-app model, generic contracts, data model, endpoint plan,
 hackathon MVP and acceptance checklist are **not current implementation requirements**.
 Revisit only after two or three working apps expose concrete shared needs. No plugin
