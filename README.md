@@ -30,12 +30,10 @@ the mobile app just starts a new item.
 
 ## Architecture
 
-For the proposed evolution into an MCP-powered acquisition PWA, see the
-[Scanfony architecture and design proposal](docs/scanfony.md). It builds on the
-existing capture queue, AI pricing service, and item workflow. A patch-collection
-example explains the generic acquisition, follow-up, matches, and actions contract,
-with museum inventory and the medical loan closet as real-world applications.
-Proposed features are distinguished from the current implementation.
+For the next apps, see the [Scanfony design direction](docs/scanfony.md): separate
+fw-bundle apps, starting with patch OCR and catalog lookup, then museum find/add.
+The generic MCP plugin architecture is deferred until a couple of working apps
+reveal what should be shared. This is proposed work, not shipped functionality.
 
 Two front ends, one Symfony backend, one SQLite database:
 
