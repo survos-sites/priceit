@@ -6802,7 +6802,7 @@
                     },
                     "recent_authentication_lifetime": {
                         "$ref": "#/$defs/types/integer",
-                        "minimum": 0,
+                        "minimum": 1,
                         "default": 7200,
                         "description": "Number of seconds an interactive authentication keeps granting IS_AUTHENTICATED_RECENTLY. Use it to make sensitive actions require the user to authenticate again.",
                         "examples": [
@@ -6811,7 +6811,7 @@
                     },
                     "very_recent_authentication_lifetime": {
                         "$ref": "#/$defs/types/integer",
-                        "minimum": 0,
+                        "minimum": 1,
                         "default": 300,
                         "description": "Number of seconds an interactive authentication keeps granting IS_AUTHENTICATED_VERY_RECENTLY, a stricter bar than IS_AUTHENTICATED_RECENTLY for the most sensitive actions.",
                         "examples": [
@@ -8158,7 +8158,7 @@
                                                 "enabled": false,
                                                 "leeway": 30
                                             },
-                                            "description": "Renew the access token with the refresh token grant of RFC 6749, Section 6, so that it stays usable to call an API on behalf of the logged-in user. The provider only issues a refresh token when it was asked for one, e.g. with the \"offline_access\" scope, and the renewal needs the \"expires_in\" it is optional for the provider to report. Whether this is enabled or not, the tokens are held as the \"oidc_refresh_token\", \"oidc_access_token\" and \"oidc_access_token_expires_at\" attributes of the security token, and the \"security.authenticator.oidc_login.token_refresher.<firewall>\" service renews them on demand. A provider rotating refresh tokens expects the previous one never to be replayed, which a session handler locking the session guarantees, and the default one does."
+                                            "description": "Renew the access token with the refresh token grant of RFC 6749, Section 6, so that it stays usable to call an API on behalf of the logged-in user. The provider only issues a refresh token when it was asked for one, e.g. with the \"offline_access\" scope, and the renewal needs the \"expires_in\" it is optional for the provider to report. Whether this is enabled or not, the tokens are held as the \"oauth2_refresh_token\", \"oauth2_access_token\" and \"oauth2_access_token_expires_at\" attributes of the security token, and the \"security.authenticator.oidc_login.token_refresher.<firewall>\" service renews them on demand. A provider rotating refresh tokens expects the previous one never to be replayed, which a session handler locking the session guarantees, and the default one does."
                                         },
                                         "enable_end_session": {
                                             "$ref": "#/$defs/types/boolean",
@@ -11879,6 +11879,20 @@
                     "default_transport": {
                         "$ref": "#/$defs/types/scalar",
                         "default": "default"
+                    },
+                    "mercure": {
+                        "$ref": "#/$defs/types/object_null",
+                        "properties": {
+                            "ignore_cookie_domain_errors": {
+                                "$ref": "#/$defs/types/boolean",
+                                "default": false,
+                                "description": "Render nothing and log a warning, instead of failing, when the authorization cookie of a private stream source cannot be created because the page is served on another domain than the hub"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "default": {
+                            "ignore_cookie_domain_errors": false
+                        }
                     }
                 },
                 "additionalProperties": false
