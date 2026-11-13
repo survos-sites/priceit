@@ -66,6 +66,8 @@ return [
     'htm' => ['version' => '3.1.1'],
     'idb' => ['version' => '8.0.3'],
     'idb-keyval' => ['version' => '6.3.0'],
+    'leaflet' => ['version' => '1.9.4'],
+    'leaflet/dist/leaflet.min.css' => ['version' => '1.9.4', 'type' => 'css'],
     'marked' => ['version' => '18.0.14'],
     'ms' => ['version' => '2.1.3'],
     'path-to-regexp' => ['version' => '6.3.0'],

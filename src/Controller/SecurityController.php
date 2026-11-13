@@ -52,10 +52,14 @@ class SecurityController extends AbstractController
             throw $this->createNotFoundException();
         }
 
+        $target = $request->getSession()->get('_security.main.target_path');
         $security->login($user, 'form_login', 'main');
         $request->getSession()->remove('_security.main.target_path');
+        if (is_string($target) && (str_starts_with($target, $request->getSchemeAndHttpHost().'/') || (str_starts_with($target, '/') && !str_starts_with($target, '//')))) {
+            return $this->redirect($target, 303);
+        }
 
-        return $this->redirectToRoute('inventory_index', status: Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('app_landing', status: Response::HTTP_SEE_OTHER);
     }
 
     #[Route(path: '/logout', name: 'app_logout')]

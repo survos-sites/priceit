@@ -146,7 +146,7 @@
                             <select {{ stimulus_target('capture', 'profile') }}
                                     data-action="capture#profileChanged">
                                 {% for profile in profiles %}
-                                    <option value="{{ profile.value }}"
+                                    <option value="{{ profile.value }}" {{ profile.value == selectedProfile|default('') ? 'selected' : '' }}
                                             data-note-placeholder="{{ profile.notePlaceholder() }}">{{ profile.label() }}</option>
                                 {% endfor %}
                             </select>

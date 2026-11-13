@@ -39,7 +39,7 @@ final class LabelConsoleService
             return Command::FAILURE;
         }
 
-        $io->writeln($this->labels->buildZpl($item, 'https://priceit.wip/admin/items/'.$id));
+        $io->writeln($this->labels->buildZpl($item, 'https://iit.wip/admin/items/'.$id));
 
         return Command::SUCCESS;
     }

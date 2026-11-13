@@ -42,7 +42,7 @@ final class ItemController extends AbstractController
             $this->profiler?->disable();
         }
 
-        return $this->render('item/capture.html.twig', ['profiles' => CaptureProfile::cases()]);
+        return $this->render('item/capture.html.twig', ['profiles' => CaptureProfile::cases(), 'selectedProfile' => CaptureProfile::tryFrom($request->query->getString('profile'))?->value ?? 'garage_sale']);
     }
 
     #[Route('/items', name: 'app_item_index')]

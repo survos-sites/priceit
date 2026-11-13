@@ -29,7 +29,7 @@ final class TabMenu implements KnpMenuHelperInterface
     {
         $menu = $event->getMenu();
 
-        $this->add($menu, route: 'inventory_capture', label: 'InventoryIt', icon: 'tabler:camera');
+        $this->add($menu, route: 'app_profiles', label: 'Profiles', icon: 'tabler:camera');
         $collections = $this->add($menu, route: 'inventory_index', label: 'Collections', icon: 'tabler:archive', returnItem: true);
         $collections->setExtra('routes', ['inventory_index', 'inventory_review']);
 

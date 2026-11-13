@@ -11,7 +11,7 @@ pwa:
         background_color: '#111318'
         display: 'standalone'
         scope: '/'
-        start_url: '/inventory'  # authenticated shared staff inventory
+        start_url: '/'  # choose a collection profile
         categories:
             - 'utilities'
         icons:
