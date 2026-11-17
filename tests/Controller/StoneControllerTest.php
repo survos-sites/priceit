@@ -45,6 +45,8 @@ final class StoneControllerTest extends WebTestCase
         self::assertSelectorCount(3, '.stone-tabs button');
         self::assertSelectorExists('.stone-controls input[data-stone-capture-target="advance"]');
         self::assertSelectorExists('[data-stone-capture-target="distance"]');
+        $client->request('POST', '/stones/upload');
+        self::assertResponseStatusCodeSame(403);
         $client->request('POST', '/stones/cemeteries', ['name' => 'No token']);
         self::assertResponseStatusCodeSame(403);
     }

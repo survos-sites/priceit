@@ -69,6 +69,36 @@ CSRF/authentication, manual fallback and preservation of reviewed values. Run
 `node --test tests/js/capture_queue.test.mjs` for multipart/legacy-outbox compatibility.
 These checks use local fixtures and mocked model responses, not paid AI calls.
 
+## Gravestone uploads to SSAI
+
+Open `/sites/stone/app`. Photos save to the existing browser outbox first, then
+upload automatically while the page is open and connected. Existing browser-only
+photos are picked up too. Settings shows the saved/pending counts and a **Retry
+uploads to SSAI** button. Failed uploads remain local; local originals are retained
+after success as a backup. Opening another hostname does not move the old browser
+outbox: return to the origin where the photos were taken.
+
+The phone posts to authenticated, CSRF-protected `/stones/upload`. IIT forwards the
+original JPEG, capture UUID, batch UUID, stone grouping, timestamp, GPS and camera
+pose to SSAI. Only a matching storage receipt and SHA-256 mark a photo uploaded.
+Retries reuse their persisted UUID, so a lost response cannot create another image.
+Conflicting or invalid evidence remains available for review/export and does not
+block other valid photographs. Groups/cemetery labels remain photographer claims.
+
+Set `IIT_CAPTURE_URL` (SSAI base URL) and `IIT_CAPTURE_KEY` in IIT `.env.local`.
+Set the identical key and `IIT_CAPTURE_TENANT=memorialatlas` in SSAI; the tenant must
+exist. The key is server-only. Local configuration uses SSAI port **8021** and IIT
+port **8013**, with the existing database and persistent scan storage.
+
+SSAI acknowledges **stored, OCR pending**. This change does not automatically run
+OCR, publish to MemorialAtlas, or resolve cemetery/person identities. No production
+deployment was performed. See the
+[receiver contract and handoff](https://github.com/museado/ssai/blob/main/docs/iit-mobile-captures.md)
+and [local closeout notes](docs/iit-ssai-handoff.md).
+
+Tests: `node --test tests/js/stone_upload.test.mjs tests/js/stone_capture.test.mjs`
+and `vendor/bin/phpunit tests/Service/StoneCaptureUploadTest.php tests/Controller/StoneControllerTest.php`.
+
 ## PriceIt foundation
 
 A garage sale is basically an inventory problem. **PriceIt** is a small Symfony app for solving it

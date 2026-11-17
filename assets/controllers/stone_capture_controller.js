@@ -4,18 +4,21 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.min.css';
 import { cameraDirection } from '../lib/stone_pose.js';
 import { Camera } from 'camera-bundle/camera';
+import { uploadStone } from '../lib/stone_upload.js';
 
 export default class extends Controller {
-  static targets = ['video', 'empty', 'context', 'advance', 'hint', 'shutter', 'status', 'cemetery', 'gps', 'gallery', 'count', 'panel', 'tab', 'map', 'mapStatus', 'orientation', 'distance'];
-  static values = { owner: String };
+  static targets = ['video', 'empty', 'context', 'advance', 'hint', 'shutter', 'status', 'cemetery', 'gps', 'gallery', 'count', 'panel', 'tab', 'map', 'mapStatus', 'orientation', 'distance', 'syncStatus'];
+  static values = { owner: String, uploadUrl: String, csrf: String };
 
   async connect() {
+    this.disconnected = false;
     this.camera = new Camera();
     this.activePanel = 'camera';
     this.urls = [];
     this.key = `stone-capture:${this.ownerValue}`;
     this.db = new Dexie(this.key);
     this.db.version(1).stores({ shots: '++id, stoneId, capturedAt' });
+    this.db.version(2).stores({ shots: '++id, stoneId, capturedAt', state: 'key' });
     try {
       await this.db.open();
       const last = await this.db.shots.orderBy('id').last();
@@ -29,12 +32,18 @@ export default class extends Controller {
       // A changed cemetery must never append evidence to a previous site's stone.
       if (this.current?.cemeteryId !== this.cemeteryTarget.value) this.current = null;
       await this.render();
+      this.onlineHandler = () => void this.sync();
+      window.addEventListener('online', this.onlineHandler);
+      void this.sync();
     } catch (error) { this.statusTarget.textContent = `Local storage unavailable: ${error.message}`; this.storageFailed = true; }
     this.visibility = () => { if (document.hidden) this.stop(); };
     document.addEventListener('visibilitychange', this.visibility);
   }
 
   disconnect() {
+    this.disconnected = true;
+    clearTimeout(this.syncTimer);
+    window.removeEventListener('online', this.onlineHandler);
     this.stop();
     document.removeEventListener('visibilitychange', this.visibility);
     this.urls.forEach(url => URL.revokeObjectURL(url));
@@ -135,6 +144,7 @@ export default class extends Controller {
       this.sequence = stone.number;
       this.statusTarget.textContent = `Saved locally · Stone ${stone.number} · GPS recorded`;
       await this.render();
+      void this.sync();
     } catch (error) { this.statusTarget.textContent = `Photo NOT saved: ${error.message}. Try again.`; }
     finally {
       this.saving = false;
@@ -146,6 +156,10 @@ export default class extends Controller {
   async render() {
     const shots = await this.db.shots.orderBy('id').toArray();
     this.shots = shots;
+    if (this.hasSyncStatusTarget && !this.syncing) {
+      const uploaded = shots.filter(shot => shot.receipt).length;
+      this.syncStatusTarget.textContent = `${uploaded} saved in SSAI · ${shots.length - uploaded} waiting to upload`;
+    }
     if (this.map) this.renderMap();
     const count = shots.filter(shot => shot.stoneId === this.current?.id).length;
     const held = !this.advanceTarget.checked;
@@ -159,7 +173,7 @@ export default class extends Controller {
     for (const shot of shots.slice(-12).reverse()) {
       const card = document.createElement('div'); card.className = 'stone-card';
       const img = document.createElement('img'); img.src = URL.createObjectURL(shot.blob); img.alt = `Stone ${shot.stoneNumber}`; this.urls.push(img.src);
-      const caption = document.createElement('p'); caption.textContent = `Stone ${shot.stoneNumber} · ${shot.gps ? 'GPS' : 'No GPS'}`;
+      const caption = document.createElement('p'); caption.textContent = `Stone ${shot.stoneNumber} · ${shot.gps ? 'GPS' : 'No GPS'} · ${shot.receipt ? 'Saved in SSAI' : shot.uploadError || 'Waiting to upload'}`;
       card.append(img, caption); this.galleryTarget.append(card);
     }
   }
@@ -267,6 +281,54 @@ export default class extends Controller {
     this.orientationTarget.textContent = pose.sensorStatus !== 'available' ? 'Orientation reading stale — no angle will be attached.' :
       direction?.bearingDegrees != null ? `Lens bearing ≈${Math.round(direction.bearingDegrees)}° · elevation ≈${Math.round(direction.elevationDegrees)}° · uncalibrated` :
       'Device tilt recorded. Absolute lens bearing unavailable; compass readings saved when provided.';
+  }
+
+  async sync() {
+    if (this.syncing || this.storageFailed || this.disconnected || !this.hasUploadUrlValue) return;
+    clearTimeout(this.syncTimer);
+    this.syncing = true;
+    let failure = null;
+    try {
+      if (!navigator.onLine) throw new Error('Offline — photos are saved here and will upload when connected.');
+      const rows = await this.db.shots.orderBy('id').toArray();
+      for (const row of rows) {
+        if (this.disconnected) break;
+        if (row.receipt) continue;
+        // Persist retry identity before any network request, including legacy browser-only shots.
+        const shot = await this.db.transaction('rw', this.db.shots, this.db.state, async () => {
+          const shot = await this.db.shots.get(row.id);
+          if (shot.receipt) return shot;
+          const key = `batch:${shot.capturedAt.slice(0, 10)}`;
+          let batch = await this.db.state.get(key);
+          if (!batch) { batch = { key, id: crypto.randomUUID() }; await this.db.state.put(batch); }
+          shot.captureId ||= crypto.randomUUID();
+          shot.batchId ||= batch.id;
+          await this.db.shots.put(shot);
+          return shot;
+        });
+        if (shot.receipt) continue;
+        this.syncStatusTarget.textContent = `Uploading stone ${shot.stoneNumber}…`;
+        try {
+          const receipt = await uploadStone(shot, { url: this.uploadUrlValue, csrf: this.csrfValue });
+          if (this.disconnected) break; // The next visit safely retries the same ID.
+          await this.db.shots.update(shot.id, { receipt, uploadError: null });
+        } catch (error) {
+          if (this.disconnected) break;
+          await this.db.shots.update(shot.id, { uploadError: error.message });
+          // One invalid legacy photo must not prevent the remaining photographs from uploading.
+          if (![409, 413, 422].includes(error.status)) throw error;
+          failure = error.message;
+        }
+      }
+    } catch (error) { failure = error.message; }
+    finally {
+      this.syncing = false;
+      if (!this.disconnected) {
+        await this.render();
+        if (failure) this.syncStatusTarget.textContent = failure;
+        if (failure || this.shots.some(shot => !shot.receipt)) this.syncTimer = setTimeout(() => void this.sync(), 30000);
+      }
+    }
   }
 
   async exportPhotos() {

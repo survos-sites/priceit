@@ -7,6 +7,7 @@ const source = (await readFile(new URL('../../assets/controllers/stone_capture_c
   .replace("import L from 'leaflet';", '')
   .replace("import 'leaflet/dist/leaflet.min.css';", '')
   .replace("import { cameraDirection } from '../lib/stone_pose.js';", '')
+  .replace("import { uploadStone } from '../lib/stone_upload.js';", '')
   .replace("import { Camera } from 'camera-bundle/camera';", '');
 globalThis.cameraDirection = (await import('../../assets/lib/stone_pose.js')).cameraDirection;
 const { default: Capture } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
