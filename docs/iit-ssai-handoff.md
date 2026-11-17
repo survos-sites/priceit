@@ -54,3 +54,13 @@ vendor/bin/phpunit tests/Dto/MobileCaptureTest.php tests/Service/LocalCaptureSer
 ```
 
 Canonical upload contract: `museado/ssai:docs/iit-mobile-captures.md`.
+
+## Pushed changes and follow-up issues
+
+- IIT storage bridge: `3a4431e`; SSAI receiver: `669e706c` (both on main).
+- [#2 — Production rollout and S24 outbox verification](https://github.com/survos-sites/priceit/issues/2).
+- [#3 — Hosted OCR and MemorialAtlas resolution](https://github.com/survos-sites/priceit/issues/3).
+
+Final targeted checks: IIT 9 PHP tests / 55 assertions and 14 JavaScript tests;
+SSAI 4 PHP tests / 15 assertions. Container and Twig lint passed. This verifies the
+code and local storage path; it does not substitute for a real phone/tunnel test.
