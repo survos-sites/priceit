@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+{% block title %}Books · InventoryIt{% endblock %}
+{% block navbar_title %}Book inventory{% endblock %}
+{% block toolbar %}{% endblock %}
+{% block body %}
+<section class="block" data-controller="book-capture" data-book-capture-owner-value="{{ app.user.userIdentifier }}" data-book-capture-lookup-value="{{ path('book_lookup', {isbn: 'ISBN'}) }}">
+    <a href="{{ path('app_profiles') }}">All profiles</a>
+    <h1>Scan. Beep. Next book.</h1>
+    <p>Point at the ISBN barcode. Each new ISBN starts a copy. Add cover and detail photos to that copy.</p>
+    <video data-book-capture-target="video" autoplay muted playsinline style="width:100%;max-height:40vh;background:#14261b;border-radius:16px"></video>
+    <div class="grid grid-cols-2 grid-gap"><button class="button button-fill" data-action="book-capture#start">Start scanner</button><button class="button" data-action="book-capture#stop">Stop</button></div>
+    <form data-action="submit->book-capture#manual">
+        <label>ISBN <input data-book-capture-target="isbn" inputmode="text" autocomplete="off" placeholder="978… or ISBN-10" aria-label="ISBN"></label>
+        <button class="button button-fill" type="submit">Record ISBN</button>
+    </form>
+    <p role="status" aria-live="polite" data-book-capture-target="status">Start the camera or enter an ISBN.</p>
+    <h2 data-book-capture-target="current">No current book</h2>
+    <div class="grid grid-cols-2 grid-gap">
+        <button class="button button-outline" data-action="book-capture#photo">Attach cover / detail photo</button>
+        <button class="button button-outline" data-action="book-capture#newCopy">New copy of this ISBN</button>
+        <button class="button" data-action="book-capture#retryLookup">Retry book lookup</button>
+        <button class="button" data-action="book-capture#export">Export inventory + photos</button>
+    </div>
+    <p>Saved in this browser, including when offline. Export before clearing browser data. Book lookup needs a connection. “New copy” distinguishes identical editions.</p>
+    <ol data-book-capture-target="list"></ol>
+</section>
+{% endblock %}

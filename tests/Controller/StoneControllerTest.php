@@ -22,7 +22,7 @@ final class StoneControllerTest extends WebTestCase
         $crawler = $client->request('GET', '/', server: ['HTTP_HOST' => 'iit.wip']);
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'What are you collecting?');
-        self::assertCount(4, $crawler->filter('img.qr'));
+        self::assertCount(5, $crawler->filter('img.qr'));
         self::assertSelectorExists('a[href="https://stone--iit.survos.org/app"]');
         self::assertSelectorExists('a[href="https://stone.iit.wip/"]');
         foreach (['stone', 'medical', 'garage-sale', 'resale'] as $profile) {

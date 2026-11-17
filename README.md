@@ -260,3 +260,51 @@ do not spend API credits or send photos to Anthropic.
 The capture-queue and camera-selection patterns are adapted from a working scanstation capture
 pipeline built for a different project (document/photo digitization) — same offline-outbox idea,
 stripped of everything specific to that domain (ArUco markers, deskewing, OCR triggers).
+
+## Books profile
+
+Open `/sites/book/app` after signing in, or select **Books** on `/profiles`.
+This uses the existing Framework7 shell and Camera class. The historical
+[Book Scanner](https://github.com/survos-sites/scanner) used Onsen; its repaired
+source is reference material, not another maintained app.
+
+The scanner detects EAN-13 book barcodes locally, validates the ISBN checksum,
+records the physical copy in IndexedDB, and beeps after the write succeeds.
+Native BarcodeDetector is preferred; browsers without EAN-13 support load the
+[ZXing/WASM ponyfill](https://github.com/Sec-ant/barcode-detector). The fallback
+needs its WASM download on first use. Manual ISBN-10/ISBN-13 entry also works.
+Titles are fetched from Google Books with Open Library fallback and cached for a
+day. Only an exact canonical ISBN match is accepted; no API key or paid AI is
+required. A lookup failure leaves the saved ISBN intact and can be retried.
+
+Grouping is an explicit decision tree:
+
+- Invalid barcode: ignore it; manual entry reports validation failure.
+- Same ISBN as the current copy: suppress duplicate video frames.
+- Different ISBN: start a new physical copy.
+- **New copy of this ISBN**: explicitly start another copy of the same edition.
+- **Attach cover / detail photo**: link the photo to the current copy with an
+  operator-assigned grouping reason. Photos are not automatically classified yet.
+
+Copies and JPEG evidence stay in this browser, partitioned by signed-in user.
+Export inventory + photos produces JSON including the image bytes, copy IDs,
+ISBNs, timestamps, lookup results and grouping reasons. This is local collection
+storage, not server synchronization or a cold-start offline guarantee. There is
+no book inventory database migration and no automatic SSAI upload for books.
+
+Local testing uses the existing fixed port **8013**:
+
+```bash
+symfony server:start -d
+# Open https://127.0.0.1:8013/sites/book/app locally.
+# For a temporary HTTPS phone URL, with cloudflared installed:
+cloudflared tunnel --url https://127.0.0.1:8013 --no-tls-verify
+# Append /sites/book/app to the printed HTTPS URL, then sign in.
+```
+
+The tunnel's public side uses HTTPS; `--no-tls-verify` applies only to the local
+Symfony development certificate. Camera access requires HTTPS. Stay on one
+origin while collecting: IndexedDB inventories are separate for each hostname.
+
+Validation: `node --test tests/js/book_grouping.test.mjs` and
+`vendor/bin/phpunit tests/Service/BookLookupTest.php tests/Controller/BookCaptureControllerTest.php`.

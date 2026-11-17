@@ -38,6 +38,7 @@ return [
     '@tabler/core/dist/css/tabler.min.css' => ['version' => '1.6.1', 'type' => 'css'],
     'admin' => ['path' => './assets/admin.js', 'entrypoint' => true],
     'app' => ['path' => './assets/app.js', 'entrypoint' => true],
+    'barcode-detector/ponyfill' => ['version' => '3.2.3'],
     'camera-bundle/audio-recorder' => ['path' => './src/CameraBundle/assets/audio_recorder.js'],
     'camera-bundle/camera' => ['path' => './src/CameraBundle/assets/camera.js'],
     'camera-bundle/capture-queue' => ['path' => './src/CameraBundle/assets/capture_queue.js'],
